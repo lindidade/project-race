@@ -544,6 +544,98 @@ app.get('/api/users/me/competitions', auth, async (req, res) => {
     }
 });
 
+// === NEW ROUTE: Update team name (Admins only) ===
+app.put('/api/competitions/:competition_id/teams/:team_id', auth, async (req, res) => {
+    const { competition_id, team_id } = req.params;
+    const { new_team_name } = req.body;
+    const myId = req.user.id;
+
+    if (!new_team_name) {
+        return res.status(400).json({ error: 'New team name is required.' });
+    }
+
+    try {
+        // 1. Check if the logged-in user is an admin or main_admin
+        const myRoleCheck = await db.query(
+            "SELECT role FROM competition_members WHERE competition_id = $1 AND user_id = $2",
+            [competition_id, myId]
+        );
+        const isMainAdminCheck = await db.query(
+            "SELECT * FROM competitions WHERE id = $1 AND created_by = $2",
+            [competition_id, myId]
+        );
+
+        const isMainAdmin = isMainAdminCheck.rows.length > 0;
+        const isAdmin = myRoleCheck.rows.length > 0 && myRoleCheck.rows[0].role === 'admin';
+
+        if (!isMainAdmin && !isAdmin) {
+            return res.status(403).json({ error: 'Access denied. Only administrators can edit teams.' });
+        }
+
+        // 2. Update the team name
+        const updatedTeam = await db.query(
+            "UPDATE teams SET name = $1 WHERE id = $2 AND competition_id = $3 RETURNING *",
+            [new_team_name, team_id, competition_id]
+        );
+
+        if (updatedTeam.rows.length === 0) {
+            return res.status(404).json({ error: 'Team not found in this competition.' });
+        }
+
+        res.json({
+            message: 'Team name updated successfully.',
+            team: updatedTeam.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while updating team name.' });
+    }
+});
+
+// === NEW ROUTE: Delete a team (Admins only) ===
+app.delete('/api/competitions/:competition_id/teams/:team_id', auth, async (req, res) => {
+    const { competition_id, team_id } = req.params;
+    const myId = req.user.id;
+
+    try {
+        // 1. Check if the logged-in user is an admin or main_admin
+        const myRoleCheck = await db.query(
+            "SELECT role FROM competition_members WHERE competition_id = $1 AND user_id = $2",
+            [competition_id, myId]
+        );
+        const isMainAdminCheck = await db.query(
+            "SELECT * FROM competitions WHERE id = $1 AND created_by = $2",
+            [competition_id, myId]
+        );
+
+        const isMainAdmin = isMainAdminCheck.rows.length > 0;
+        const isAdmin = myRoleCheck.rows.length > 0 && myRoleCheck.rows[0].role === 'admin';
+
+        if (!isMainAdmin && !isAdmin) {
+            return res.status(403).json({ error: 'Access denied. Only administrators can delete teams.' });
+        }
+
+        // 2. Delete the team (ON DELETE CASCADE will automatically remove members from team_members)
+        const deletedTeam = await db.query(
+            "DELETE FROM teams WHERE id = $1 AND competition_id = $2 RETURNING *",
+            [team_id, competition_id]
+        );
+
+        if (deletedTeam.rows.length === 0) {
+            return res.status(404).json({ error: 'Team not found in this competition.' });
+        }
+
+        res.json({
+            message: 'Team deleted successfully.'
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while deleting team.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
