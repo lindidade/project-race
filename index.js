@@ -456,6 +456,73 @@ app.post('/api/competitions/:competition_id/invite', auth, async (req, res) => {
     }
 });
 
+// === NEW ROUTE: Get all pending competition invitations for the logged-in user ===
+app.get('/api/users/me/competition-invitations', auth, async (req, res) => {
+    const myId = req.user.id;
+
+    try {
+        const invitations = await db.query(
+            `SELECT cm.id AS membership_id, c.id AS competition_id, c.name AS competition_name, c.created_at 
+             FROM competition_members cm
+             JOIN competitions c ON cm.competition_id = c.id
+             WHERE cm.user_id = $1 AND cm.status = 'pending'`,
+            [myId]
+        );
+
+        res.json({ invitations: invitations.rows });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while fetching invitations.' });
+    }
+});
+
+// === NEW ROUTE: Get team leaderboard with nested members and their distances ===
+app.get('/api/competitions/:competition_id/teams-leaderboard', auth, async (req, res) => {
+    const { competition_id } = req.params;
+
+    try {
+        // This query fetches teams and aggregates their members into a JSON array
+        const teamsQuery = `
+            SELECT 
+                t.id AS team_id,
+                t.name AS team_name,
+                t.total_km AS team_total_km,
+                COALESCE(
+                    JSON_AGG(
+                        JSON_BUILD_OBJECT(
+                            'user_id', u.id,
+                            'name', u.name,
+                            'individual_km', COALESCE(
+                                (SELECT SUM(distance) FROM activities WHERE user_id = u.id AND team_id = t.id), 0
+                            )
+                        )
+                    ) FILTER (WHERE u.id IS NOT NULL), '[]'
+                ) AS members
+            FROM teams t
+            LEFT JOIN team_members tm ON t.id = tm.team_id
+            LEFT JOIN users u ON tm.user_id = u.id
+            WHERE t.competition_id = $1
+            GROUP BY t.id
+            ORDER BY t.total_km DESC;
+        `;
+
+        const result = await db.query(teamsQuery, [competition_id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'No teams found for this competition.' });
+        }
+
+        res.json({
+            competition_id: competition_id,
+            leaderboard: result.rows
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while fetching teams leaderboard.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
