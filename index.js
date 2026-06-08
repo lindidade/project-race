@@ -636,6 +636,105 @@ app.delete('/api/competitions/:competition_id/teams/:team_id', auth, async (req,
     }
 });
 
+// === NEW ROUTE: Update competition name (Main Admin only) ===
+app.put('/api/competitions/:competition_id', auth, async (req, res) => {
+    const { competition_id } = req.params;
+    const { new_competition_name } = req.body;
+    const myId = req.user.id;
+
+    if (!new_competition_name) {
+        return res.status(400).json({ error: 'New competition name is required.' });
+    }
+
+    try {
+        // Only the main_admin (creator) should be allowed to change the competition details
+        const compCheck = await db.query('SELECT * FROM competitions WHERE id = $1', [competition_id]);
+        
+        if (compCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Competition not found.' });
+        }
+
+        if (compCheck.rows[0].created_by !== myId) {
+            return res.status(403).json({ error: 'Access denied. Only the Main Administrator can edit the competition settings.' });
+        }
+
+        const updatedComp = await db.query(
+            "UPDATE competitions SET name = $1 WHERE id = $2 RETURNING *",
+            [new_competition_name, competition_id]
+        );
+
+        res.json({
+            message: 'Competition name updated successfully.',
+            competition: updatedComp.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while updating competition.' });
+    }
+});
+
+// === NEW ROUTE: Remove a participant from the competition (Admins only) ===
+app.delete('/api/competitions/:competition_id/members/:user_id', auth, async (req, res) => {
+    const { competition_id, user_id } = req.params;
+    const myId = req.user.id;
+
+    // Prevent blocking/deleting yourself from the admin route
+    if (parseInt(user_id) === myId) {
+        return res.status(400).json({ error: 'You cannot remove yourself using this route. Use the leave route instead.' });
+    }
+
+    try {
+        // 1. Check if the logged-in user is an admin or main_admin
+        const myRoleCheck = await db.query(
+            "SELECT role FROM competition_members WHERE competition_id = $1 AND user_id = $2",
+            [competition_id, myId]
+        );
+        const isMainAdminCheck = await db.query(
+            "SELECT * FROM competitions WHERE id = $1 AND created_by = $2",
+            [competition_id, myId]
+        );
+
+        const isMainAdmin = isMainAdminCheck.rows.length > 0;
+        const isAdmin = myRoleCheck.rows.length > 0 && myRoleCheck.rows[0].role === 'admin';
+
+        if (!isMainAdmin && !isAdmin) {
+            return res.status(403).json({ error: 'Access denied. Only administrators can remove participants.' });
+        }
+
+        // 2. Protect the Main Admin from being removed by extra admins
+        const targetCheck = await db.query('SELECT created_by FROM competitions WHERE id = $1', [competition_id]);
+        if (targetCheck.rows[0].created_by === parseInt(user_id)) {
+            return res.status(403).json({ error: 'Action denied. The Main Administrator cannot be removed.' });
+        }
+
+        // 3. Remove the participant from the competition
+        const removedMember = await db.query(
+            "DELETE FROM competition_members WHERE competition_id = $1 AND user_id = $2 RETURNING *",
+            [competition_id, user_id]
+        );
+
+        if (removedMember.rows.length === 0) {
+            return res.status(404).json({ error: 'Participant not found in this competition.' });
+        }
+
+        // 4. Also remove them from any team they are currently in within this competition
+        await db.query(
+            `DELETE FROM team_members 
+             WHERE user_id = $1 AND team_id IN (SELECT id FROM teams WHERE competition_id = $2)`,
+            [user_id, competition_id]
+        );
+
+        res.json({
+            message: 'Participant has been successfully removed from the competition and their team.'
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while removing participant.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
