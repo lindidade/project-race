@@ -335,6 +335,84 @@ app.post('/api/activities', auth, async (req, res) => {
     }
 });
 
+// === NY ROUTE: Hämta topplista för en tävling ===
+app.get('/api/competitions/:competition_id/leaderboard', auth, async (req, res) => {
+    const { competition_id } = req.params;
+
+    try {
+        // Hämta alla lag för tävlingen och sortera efter total_km (högst först)
+        const leaderboard = await db.query(
+            `SELECT id, name, tier, total_km 
+             FROM teams 
+             WHERE competition_id = $1 
+             ORDER BY total_km DESC`,
+            [competition_id]
+        );
+
+        if (leaderboard.rows.length === 0) {
+            return res.status(404).json({ message: 'Inga lag hittades för denna tävling än.' });
+        }
+
+        res.json({
+            competition_id: competition_id,
+            leaderboard: leaderboard.rows
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Serverfel när topplistan skulle hämtas.' });
+    }
+});
+
+// === NEW ROUTE: Assign extra admins to a competition (Max 4) ===
+app.post('/api/competitions/:competition_id/admins', auth, async (req, res) => {
+    const { competition_id } = req.params;
+    const { user_id_to_promote } = req.body; // The ID of the user becoming admin
+    const myId = req.user.id;
+
+    try {
+        // 1. Verify that I am the main_admin (creator) of this competition
+        const compCheck = await db.query('SELECT * FROM competitions WHERE id = $1', [competition_id]);
+        
+        if (compCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Competition not found.' });
+        }
+
+        if (compCheck.rows[0].created_by !== myId) {
+            return res.status(403).json({ error: 'Only the main administrator can assign other admins.' });
+        }
+
+        // 2. Count current extra admins for this competition
+        const adminCount = await db.query(
+            "SELECT COUNT(*) FROM competition_members WHERE competition_id = $1 AND role = 'admin'",
+            [competition_id]
+        );
+
+        if (parseInt(adminCount.rows[0].count) >= 4) {
+            return res.status(400).json({ error: 'Maximum limit of 4 extra administrators has been reached.' });
+        }
+
+        // 3. Update the user's role to 'admin' inside the competition
+        const updatedMember = await db.query(
+            "UPDATE competition_members SET role = 'admin' WHERE competition_id = $1 AND user_id = $2 RETURNING *",
+            [competition_id, user_id_to_promote]
+        );
+
+        if (updatedMember.rows.length === 0) {
+            return res.status(404).json({ error: 'User is not a member of this competition.' });
+        }
+
+        res.json({
+            message: 'User has been successfully promoted to admin.',
+            member: updatedMember.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while assigning admin role.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
