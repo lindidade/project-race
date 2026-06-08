@@ -229,6 +229,112 @@ app.get('/api/friends', auth, async (req, res) => {
     }
 });
 
+// === UPPDATERAD ROUTE: Skapa lag och lägg till vänner direkt ===
+app.post('/api/competitions/:competition_id/teams', auth, async (req, res) => {
+    const { competition_id } = req.params;
+    const { team_name, friend_ids } = req.body; // friend_ids ska vara en array, t.ex. [2, 3]
+    const myId = req.user.id;
+
+    if (!team_name) {
+        return res.status(400).json({ error: 'Lagets namn krävs.' });
+    }
+
+    try {
+        // 1. Kontrollera att det är JAG som har skapat tävlingen
+        const compCheck = await db.query('SELECT * FROM competitions WHERE id = $1', [competition_id]);
+        
+        if (compCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Tävlingen hittades inte.' });
+        }
+
+        if (compCheck.rows[0].created_by !== myId) {
+            return res.status(403).json({ error: 'Endast Huvudadministratören får skapa lag.' });
+        }
+
+        // 2. Skapa laget
+        const newTeam = await db.query(
+            'INSERT INTO teams (name, competition_id) VALUES ($1, $2) RETURNING *',
+            [team_name, competition_id]
+        );
+
+        const teamId = newTeam.rows[0].id;
+
+        // 3. Om vänner skickades med, lägg till dem i team_members-tabellen
+        if (friend_ids && Array.isArray(friend_ids) && friend_ids.length > 0) {
+            
+            // Vi bygger upp en dynamisk SQL-fråga för att sätta in alla vänner i en enda smäll
+            // Resultatet blir t.ex: INSERT INTO team_members (team_id, user_id) VALUES (1, 2), (1, 3)
+            const values = [];
+            const valueStrings = [];
+            
+            friend_ids.forEach((id, index) => {
+                const i = index * 2;
+                values.push(teamId, id);
+                valueStrings.push(`($${i + 1}, $${i + 2})`);
+            });
+
+            const insertMembersQuery = `
+                INSERT INTO team_members (team_id, user_id) 
+                VALUES ${valueStrings.join(', ')}
+            `;
+
+            await db.query(insertMembersQuery, values);
+        }
+
+        res.status(201).json({
+            message: 'Laget har skapats och vännerna har lagts till i laget!',
+            team: newTeam.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Serverfel när laget och medlemmar skulle skapas.' });
+    }
+});
+
+// === NY ROUTE: Registrera löpta kilometer ===
+app.post('/api/activities', auth, async (req, res) => {
+    const { distance, team_id } = req.body; // Distans i km och vilket lag det gäller
+    const userId = req.user.id;
+
+    if (!distance || !team_id) {
+        return res.status(400).json({ error: 'Distans (km) och lag-ID krävs.' });
+    }
+
+    try {
+        // 1. Kontrollera att användaren faktiskt är medlem i det laget
+        const memberCheck = await db.query(
+            'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2',
+            [team_id, userId]
+        );
+
+        if (memberCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Du är inte medlem i det här laget och kan inte registrera kilometer här.' });
+        }
+
+        // 2. Spara aktiviteten i databasen
+        const newActivity = await db.query(
+            'INSERT INTO activities (user_id, team_id, distance) VALUES ($1, $2, $3) RETURNING *',
+            [userId, team_id, distance]
+        );
+
+        // 3. Uppdatera lagets totala kilometer (total_km) i teams-tabellen
+        await db.query(
+            'UPDATE teams SET total_km = total_km + $1 WHERE id = $2',
+            [distance, team_id]
+        );
+
+        res.status(201).json({
+            message: 'Aktivitet registrerad och lagets totala distans har uppdaterats!',
+            activity: newActivity.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Serverfel när aktiviteten skulle registreras.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
