@@ -735,6 +735,256 @@ app.delete('/api/competitions/:competition_id/members/:user_id', auth, async (re
     }
 });
 
+// === NEW ROUTE: Leave a team (Participant self-service) ===
+app.delete('/api/competitions/:competition_id/teams/:team_id/leave', auth, async (req, res) => {
+    const { competition_id, team_id } = req.params;
+    const myId = req.user.id;
+
+    try {
+        // Remove the logged-in user from the specific team
+        const result = await db.query(
+            "DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 RETURNING *",
+            [team_id, myId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'You are not a member of this team.' });
+        }
+
+        res.json({ message: 'You have successfully left the team.' });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while leaving the team.' });
+    }
+});
+
+// === NEW ROUTE: Leave a competition completely (Participant self-service) ===
+app.delete('/api/competitions/:competition_id/leave', auth, async (req, res) => {
+    const { competition_id } = req.params;
+    const myId = req.user.id;
+
+    try {
+        // 1. Protect the Main Admin – they cannot just leave, they must delete or transfer it
+        const compCheck = await db.query('SELECT created_by FROM competitions WHERE id = $1', [competition_id]);
+        
+        if (compCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Competition not found.' });
+        }
+
+        if (compCheck.rows[0].created_by === myId) {
+            return res.status(403).json({ error: 'As the Main Administrator, you cannot leave. You must delete the competition instead.' });
+        }
+
+        // 2. Remove from the competition membership
+        const result = await db.query(
+            "DELETE FROM competition_members WHERE competition_id = $1 AND user_id = $2 RETURNING *",
+            [competition_id, myId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'You are not a member of this competition.' });
+        }
+
+        // 3. Automatically clean up and remove them from any team inside this competition
+        await db.query(
+            `DELETE FROM team_members 
+             WHERE user_id = $1 AND team_id IN (SELECT id FROM teams WHERE competition_id = $2)`,
+            [myId, competition_id]
+        );
+
+        res.json({ message: 'You have successfully left the competition and your team.' });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while leaving the competition.' });
+    }
+});
+
+// === UPDATED ROUTE: Register activity with competition end-date enforcement ===
+app.post('/api/activities', auth, async (req, res) => {
+    const { distance, team_id } = req.body;
+    const myId = req.user.id;
+
+    if (!distance || !team_id) {
+        return res.status(400).json({ error: 'Distance and team_id are required.' });
+    }
+
+    try {
+        // 1. Check if the user is actually a member of the team
+        const memberCheck = await db.query(
+            "SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2",
+            [team_id, myId]
+        );
+
+        if (memberCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Access denied. You are not a member of this team.' });
+        }
+
+        // 2. CRITICAL ANTI-CHEAT: Check if the competition has already ended
+        const compCheck = await db.query(
+            `SELECT c.end_date 
+             FROM teams t
+             JOIN competitions c ON t.competition_id = c.id
+             WHERE t.id = $1`,
+            [team_id]
+        );
+
+        const endDate = new Date(compCheck.rows[0].end_date);
+        const now = new Date();
+
+        if (now > endDate) {
+            return res.status(400).json({ error: 'Action denied. This competition has already ended, and no more distances can be logged.' });
+        }
+
+        // 3. Insert the new activity
+        const newActivity = await db.query(
+            "INSERT INTO activities (user_id, team_id, distance) VALUES ($1, $2, $3) RETURNING *",
+            [myId, team_id, distance]
+        );
+
+        // 4. Update the team's total kilometers
+        await db.query(
+            "UPDATE teams SET total_km = total_km + $1 WHERE id = $2",
+            [distance, team_id]
+        );
+
+        res.status(201).json({
+            message: 'Activity registered successfully and team total updated.',
+            activity: newActivity.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while registering activity.' });
+    }
+});
+
+// === NEW ROUTE: Update privacy setting (public or private) ===
+app.put('/api/users/me/privacy', auth, async (req, res) => {
+    const { privacy_setting } = req.body; // Expected: 'public' or 'private'
+    const myId = req.user.id;
+
+    if (!privacy_setting || (privacy_setting !== 'public' && privacy_setting !== 'private')) {
+        return res.status(400).json({ error: "Invalid setting. Must be either 'public' or 'private'." });
+    }
+
+    try {
+        const updatedUser = await db.query(
+            "UPDATE users SET privacy_setting = $1 WHERE id = $2 RETURNING id, name, email, privacy_setting",
+            [privacy_setting, myId]
+        );
+
+        res.json({
+            message: `Privacy setting successfully updated to ${privacy_setting}.`,
+            user: updatedUser.rows[0]
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while updating privacy setting.' });
+    }
+});
+
+// === NEW ROUTE: Get a user's profile statistics (With privacy protection) ===
+app.get('/api/users/:user_id/profile', auth, async (req, res) => {
+    const targetUserId = req.params.user_id;
+    const myId = req.user.id;
+
+    try {
+        // 1. Fetch the target user's privacy setting and name
+        const userCheck = await db.query("SELECT id, name, privacy_setting FROM users WHERE id = $1", [targetUserId]);
+
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const targetUser = userCheck.rows[0];
+
+        // 2. Enforcement: If private and NOT me, block the access!
+        if (targetUser.privacy_setting === 'private' && parseInt(targetUserId) !== myId) {
+            return res.status(403).json({ error: 'This profile is private.' });
+        }
+
+        // 3. If public (or it is me), fetch total stats (total km and total activities)
+        const statsQuery = `
+            SELECT 
+                COALESCE(SUM(distance), 0) AS total_distance_km,
+                COUNT(*) AS total_activities
+            FROM activities 
+            WHERE user_id = $1
+        `;
+        const statsResult = await db.query(statsQuery, [targetUserId]);
+
+        res.json({
+            user_id: targetUser.id,
+            name: targetUser.name,
+            privacy_setting: targetUser.privacy_setting,
+            statistics: statsResult.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while fetching profile.' });
+    }
+});
+
+// === NEW ROUTE: Delete an activity and deduct distance from team (Admins only) ===
+app.delete('/api/competitions/:competition_id/activities/:activity_id', auth, async (req, res) => {
+    const { competition_id, activity_id } = req.params;
+    const myId = req.user.id;
+
+    try {
+        // 1. Check if the logged-in user is an admin or main_admin
+        const myRoleCheck = await db.query(
+            "SELECT role FROM competition_members WHERE competition_id = $1 AND user_id = $2",
+            [competition_id, myId]
+        );
+        const isMainAdminCheck = await db.query(
+            "SELECT * FROM competitions WHERE id = $1 AND created_by = $2",
+            [competition_id, myId]
+        );
+
+        const isMainAdmin = isMainAdminCheck.rows.length > 0;
+        const isAdmin = myRoleCheck.rows.length > 0 && myRoleCheck.rows[0].role === 'admin';
+
+        if (!isMainAdmin && !isAdmin) {
+            return res.status(403).json({ error: 'Access denied. Only administrators can delete activities.' });
+        }
+
+        // 2. Fetch the activity to know how many kilometers to deduct and which team it belongs to
+        const activityCheck = await db.query(
+            `SELECT a.distance, a.team_id 
+             FROM activities a
+             JOIN teams t ON a.team_id = t.id
+             WHERE a.id = $1 AND t.competition_id = $2`,
+            [activity_id, competition_id]
+        );
+
+        if (activityCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Activity not found in this competition.' });
+        }
+
+        const { distance, team_id } = activityCheck.rows[0];
+
+        // 3. Delete the activity
+        await db.query("DELETE FROM activities WHERE id = $1", [activity_id]);
+
+        // 4. DEDUCT the distance from the team's total_km
+        await db.query(
+            "UPDATE teams SET total_km = GREATEST(0, total_km - $1) WHERE id = $2",
+            [distance, team_id]
+        );
+
+        res.json({
+            message: `Activity successfully deleted. ${distance} km has been deducted from the team total.`
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while deleting activity.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
