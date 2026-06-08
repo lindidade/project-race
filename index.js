@@ -413,6 +413,49 @@ app.post('/api/competitions/:competition_id/admins', auth, async (req, res) => {
     }
 });
 
+// === NEW ROUTE: Invite a friend to a competition ===
+app.post('/api/competitions/:competition_id/invite', auth, async (req, res) => {
+    const { competition_id } = req.params;
+    const { user_id_to_invite } = req.body;
+    const myId = req.user.id;
+
+    try {
+        // 1. Check if the logged-in user is an admin or main_admin
+        const myRoleCheck = await db.query(
+            "SELECT role FROM competition_members WHERE competition_id = $1 AND user_id = $2",
+            [competition_id, myId]
+        );
+        const isMainAdminCheck = await db.query(
+            "SELECT * FROM competitions WHERE id = $1 AND created_by = $2",
+            [competition_id, myId]
+        );
+
+        if (isMainAdminCheck.rows.length === 0 && (myRoleCheck.rows.length === 0 || myRoleCheck.rows[0].role !== 'admin')) {
+            return res.status(403).json({ error: 'Only administrators can invite users to this competition.' });
+        }
+
+        // 2. Insert the invited user with 'pending' status
+        const newInvite = await db.query(
+            `INSERT INTO competition_members (competition_id, user_id, role, status) 
+             VALUES ($1, $2, 'participant', 'pending') 
+             RETURNING *`,
+            [competition_id, user_id_to_invite]
+        );
+
+        res.status(201).json({
+            message: 'Invitation sent successfully.',
+            invite: newInvite.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        if (err.code === '23505') { // Unique violation if already invited
+            return res.status(400).json({ error: 'This user is already invited or a member of this competition.' });
+        }
+        res.status(500).json({ error: 'Server error while sending invitation.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
