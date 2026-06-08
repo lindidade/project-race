@@ -523,6 +523,27 @@ app.get('/api/competitions/:competition_id/teams-leaderboard', auth, async (req,
     }
 });
 
+// === NEW ROUTE: Get all competitions the logged-in user is an active member of ===
+app.get('/api/users/me/competitions', auth, async (req, res) => {
+    const myId = req.user.id;
+
+    try {
+        const myCompetitions = await db.query(
+            `SELECT c.id AS competition_id, c.name AS competition_name, cm.role, cm.tier, c.created_at
+             FROM competition_members cm
+             JOIN competitions c ON cm.competition_id = c.id
+             WHERE cm.user_id = $1 AND cm.status = 'accepted'
+             ORDER BY c.created_at DESC`,
+            [myId]
+        );
+
+        res.json({ competitions: myCompetitions.rows });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error while fetching your competitions.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servern är igång på port ${PORT}`);
 });
