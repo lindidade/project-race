@@ -1,0 +1,104 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_URL = 'http://192.168.1.123:5255/api';
+
+const ApiService = {
+    register: async (name: string, email: string, password: string) => {
+        try {
+            const response = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+            const textData = await response.text();
+            let data;
+            try {
+                data = JSON.parse(textData);
+            } catch (e) {
+                data = { message: textData };
+            }
+            if (!response.ok) throw new Error(data.message || 'Registration failed');
+            return data;
+        } catch (error: any) {
+            console.error('API Register Error:', error.message);
+            throw error;
+        }
+    },
+
+    login: async (email: string, password: string) => {
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const textData = await response.text();
+            let data;
+            try {
+                data = JSON.parse(textData);
+            } catch (e) {
+                data = { message: textData };
+            }
+            if (!response.ok) throw new Error(data.message || 'Login failed');
+            if (data.token) {
+                await AsyncStorage.setItem('userToken', data.token);
+                await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+            }
+            return data;
+        } catch (error: any) {
+            console.error('API Login Error:', error.message);
+            throw error;
+        }
+    },
+
+    getToken: async () => {
+        return await AsyncStorage.getItem('userToken');
+    },
+
+    getUserData: async () => {
+        const data = await AsyncStorage.getItem('userData');
+        return data ? JSON.parse(data) : null;
+    },
+
+    logout: async () => {
+        await AsyncStorage.removeItem('userToken');
+        await AsyncStorage.removeItem('userData');
+    },
+
+    saveActivity: async (userId: number, distance: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/activities`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ userId, distance })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Kunde inte spara aktivitet');
+            return data;
+        } catch (error: any) {
+            console.error('API SaveActivity Error:', error.message);
+            throw error;
+        }
+    },
+
+    getUserActivities: async (userId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/activities/user/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Kunde inte hämta aktiviteter');
+            return data;
+        } catch (error: any) {
+            console.error('API GetUserActivities Error:', error.message);
+            throw error;
+        }
+    }
+};
+
+export default ApiService;
