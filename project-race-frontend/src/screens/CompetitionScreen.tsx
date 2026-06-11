@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import ApiService from '../services/ApiService';
 
 export default function CompetitionScreen({ user, onBack }: { user: any, onBack: () => void }) {
@@ -8,8 +9,12 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
     const [creating, setCreating] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [name, setName] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
+
+    const today = new Date();
 
     const fetchCompetitions = async () => {
         try {
@@ -24,6 +29,8 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
 
     useEffect(() => { fetchCompetitions(); }, []);
 
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
     const handleCreate = async () => {
         if (!name || !startDate || !endDate) {
             Alert.alert('Error', 'Please fill in all fields.');
@@ -31,11 +38,11 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
         }
         setCreating(true);
         try {
-            await ApiService.createCompetition(name, startDate, endDate, user.id);
+            await ApiService.createCompetition(name, formatDate(startDate), formatDate(endDate), user.id);
             Alert.alert('Success', 'Competition created!');
             setName('');
-            setStartDate('');
-            setEndDate('');
+            setStartDate(null);
+            setEndDate(null);
             setShowForm(false);
             fetchCompetitions();
         } catch (error: any) {
@@ -73,18 +80,57 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
                         value={name}
                         onChangeText={setName}
                     />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Start date (YYYY-MM-DD)"
-                        value={startDate}
-                        onChangeText={setStartDate}
-                    />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="End date (YYYY-MM-DD)"
-                        value={endDate}
-                        onChangeText={setEndDate}
-                    />
+
+                    {Platform.OS === 'web' ? (
+                        React.createElement('input', {
+                            type: 'date',
+                            min: formatDate(today),
+                            value: startDate ? formatDate(startDate) : '',
+                            onChange: (e: any) => setStartDate(new Date(e.target.value)),
+                            style: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingLeft: 15, marginBottom: 15, fontSize: 16, border: '1px solid #E2E8F0', width: '100%', boxSizing: 'border-box' }
+                        })
+                    ) : (
+                        <>
+                            <TouchableOpacity style={styles.datePicker} onPress={() => setShowStartPicker(true)}>
+                                <Text style={styles.datePickerText}>
+                                    {startDate ? `Start: ${formatDate(startDate)}` : 'Select start date'}
+                                </Text>
+                            </TouchableOpacity>
+                            <DateTimePickerModal
+                                isVisible={showStartPicker}
+                                mode="date"
+                                minimumDate={today}
+                                onConfirm={(date) => { setStartDate(date); setShowStartPicker(false); }}
+                                onCancel={() => setShowStartPicker(false)}
+                            />
+                        </>
+                    )}
+
+                    {Platform.OS === 'web' ? (
+                        React.createElement('input', {
+                            type: 'date',
+                            min: startDate ? formatDate(startDate) : formatDate(today),
+                            value: endDate ? formatDate(endDate) : '',
+                            onChange: (e: any) => setEndDate(new Date(e.target.value)),
+                            style: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingLeft: 15, marginBottom: 15, fontSize: 16, border: '1px solid #E2E8F0', width: '100%', boxSizing: 'border-box' }
+                        })
+                    ) : (
+                        <>
+                            <TouchableOpacity style={styles.datePicker} onPress={() => setShowEndPicker(true)}>
+                                <Text style={styles.datePickerText}>
+                                    {endDate ? `End: ${formatDate(endDate)}` : 'Select end date'}
+                                </Text>
+                            </TouchableOpacity>
+                            <DateTimePickerModal
+                                isVisible={showEndPicker}
+                                mode="date"
+                                minimumDate={startDate || today}
+                                onConfirm={(date) => { setEndDate(date); setShowEndPicker(false); }}
+                                onCancel={() => setShowEndPicker(false)}
+                            />
+                        </>
+                    )}
+
                     <TouchableOpacity style={styles.submitButton} onPress={handleCreate} disabled={creating}>
                         {creating ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Create</Text>}
                     </TouchableOpacity>
@@ -119,6 +165,8 @@ const styles = StyleSheet.create({
     form: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#E2E8F0' },
     formTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A202C', marginBottom: 15 },
     input: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0', color: '#1A202C' },
+    datePicker: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, borderWidth: 1, borderColor: '#E2E8F0', justifyContent: 'center' },
+    datePickerText: { fontSize: 16, color: '#1A202C' },
     submitButton: { backgroundColor: '#4CAF50', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     submitButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     section: { backgroundColor: '#fff', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: '#E2E8F0' },
