@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.1.123:5255/api';
+//const API_URL = 'http://192.168.1.123:5000/api';
+const API_URL = 'http://localhost:5000/api';
 
 const ApiService = {
     register: async (name: string, email: string, password: string) => {
@@ -98,7 +99,57 @@ const ApiService = {
             console.error('API GetUserActivities Error:', error.message);
             throw error;
         }
+    },
+getFriends: async (userId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/friends/user/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not load friends');
+            return data;
+        } catch (error: any) {
+            console.error('API GetFriends Error:', error.message);
+            throw error;
+        }
+    },
+
+    sendFriendRequest: async (userId1: number, userId2: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/friends/request`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ userId1, userId2 })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not send request');
+            return data;
+        } catch (error: any) {
+            console.error('API SendFriendRequest Error:', error.message);
+            throw error;
+        }
+    },
+
+    searchUsers: async (email: string) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/users/search?email=${email}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not search users');
+            return data;
+        } catch (error: any) {
+            console.error('API SearchUsers Error:', error.message);
+            throw error;
+        }
     }
+
 };
 
 export default ApiService;

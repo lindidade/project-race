@@ -4,8 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import FriendsScreen from './src/screens/FriendsScreen';
 
-type Screen = 'login' | 'register' | 'dashboard';
+type Screen = 'login' | 'register' | 'dashboard' | 'friends';
 
 export default function App() {
     const [screen, setScreen] = useState<Screen>('login');
@@ -55,7 +56,11 @@ export default function App() {
     }
 
     if (screen === 'dashboard' && user) {
-        return <DashboardScreen user={user} onLogout={handleLogout} />;
+        return <DashboardScreen user={user} onLogout={handleLogout} onNavigateToFriends={() => setScreen('friends')} />;
+    }
+
+    if (screen === 'friends' && user) {
+        return <FriendsScreen user={user} onBack={() => setScreen('dashboard')} />;
     }
 
     return (

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import ApiService from '../services/ApiService';
 
-export default function DashboardScreen({ user, onLogout }: { 
+export default function DashboardScreen({ user, onLogout, onNavigateToFriends }: { 
     user: any, 
-    onLogout: () => void 
+    onLogout: () => void,
+    onNavigateToFriends: () => void
 }) {
     const [distance, setDistance] = useState('');
     const [stats, setStats] = useState({ totalDistance: 0, activityCount: 0 });
@@ -78,19 +79,23 @@ export default function DashboardScreen({ user, onLogout }: {
             </View>
 
             <View style={styles.formCard}>
-                <Text style={styles.formTitle}>Logga ny löprunda 🏃‍♂️</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Distans i km (t.ex. 5.5)"
-                    keyboardType="numeric"
-                    value={distance}
-                    onChangeText={setDistance}
-                />
-                <TouchableOpacity style={styles.button} onPress={handleAddActivity} disabled={submitting}>
-                    {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Spara runda</Text>}
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+    <Text style={styles.formTitle}>Log new run 🏃‍♂️</Text>
+    <TextInput
+        style={styles.input}
+        placeholder="Distance in km (e.g. 5.5)"
+        keyboardType="numeric"
+        value={distance}
+        onChangeText={setDistance}
+    />
+    <TouchableOpacity style={styles.button} onPress={handleAddActivity} disabled={submitting}>
+        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save run</Text>}
+    </TouchableOpacity>
+</View>
+
+<TouchableOpacity style={styles.friendsButton} onPress={onNavigateToFriends}>
+    <Text style={styles.friendsButtonText}>👥 My Friends</Text>
+</TouchableOpacity>
+            </ScrollView>
     );
 }
 
@@ -110,4 +115,6 @@ const styles = StyleSheet.create({
     input: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0', color: '#1A202C' },
     button: { backgroundColor: '#4CAF50', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    friendsButton: { backgroundColor: '#2B6CB0', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 15 },
+    friendsButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
