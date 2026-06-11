@@ -1,0 +1,101 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using project_race_backend_csharp.Models;
+
+namespace project_race_backend_csharp.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class CompetitionsController : ControllerBase
+    {
+        private readonly ProjectRaceContext _context;
+
+        public CompetitionsController(ProjectRaceContext context)
+        {
+            _context = context;
+        }
+
+        // POST: api/competitions - Create a new competition
+        [HttpPost]
+        public async Task<IActionResult> CreateCompetition([FromBody] CreateCompetitionModel model)
+        {
+            var competition = new Competition
+{
+    Name = model.Name,
+    StartDate = model.StartDate != null ? DateOnly.Parse(model.StartDate) : null,
+    EndDate = model.EndDate != null ? DateOnly.Parse(model.EndDate) : null,
+    CreatedBy = model.CreatedBy,
+    CreatedAt = DateTime.UtcNow
+};
+
+            _context.Competitions.Add(competition);
+            await _context.SaveChangesAsync();
+
+            // Add creator as super_admin
+            var member = new CompetitionMember
+            {
+                CompetitionId = competition.Id,
+                UserId = model.CreatedBy,
+                JoinedAt = DateTime.UtcNow
+            };
+
+            _context.CompetitionMembers.Add(member);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Competition created!", competitionId = competition.Id });
+        }
+
+        // GET: api/competitions/user/5 - Get all competitions for a user
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetUserCompetitions(int userId)
+        {
+            var competitions = await _context.CompetitionMembers
+                .Where(cm => cm.UserId == userId)
+                .Join(_context.Competitions,
+                    cm => cm.CompetitionId,
+                    c => c.Id,
+                    (cm, c) => new
+                    {
+                        c.Id,
+                        c.Name,
+                        c.StartDate,
+                        c.EndDate,
+                        c.CreatedBy,
+                        cm.JoinedAt
+                    })
+                .ToListAsync();
+
+            return Ok(competitions);
+        }
+
+        // GET: api/competitions/5 - Get competition details
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetCompetition(int id)
+        {
+            var competition = await _context.Competitions
+                .Where(c => c.Id == id)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Name,
+                    c.StartDate,
+                    c.EndDate,
+                    c.CreatedBy
+                })
+                .FirstOrDefaultAsync();
+
+            if (competition == null)
+                return NotFound(new { message = "Competition not found." });
+
+            return Ok(competition);
+        }
+    }
+
+    public class CreateCompetitionModel
+{
+    public string Name { get; set; } = string.Empty;
+    public string? StartDate { get; set; }
+    public string? EndDate { get; set; }
+    public int CreatedBy { get; set; }
+}
+}
