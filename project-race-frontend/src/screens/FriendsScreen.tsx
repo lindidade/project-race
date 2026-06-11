@@ -2,11 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, FlatList } from 'react-native';
 import ApiService from '../services/ApiService';
 
-export default function FriendsScreen({ user }: { user: any }) {
+export default function FriendsScreen({ user, onBack }: { user: any, onBack: () => void }) {
     const [friends, setFriends] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+    const fetchPendingRequests = async () => {
+    try {
+        const data = await ApiService.getPendingRequests(user.id);
+        setPendingRequests(data);
+    } catch (error) {
+        console.error('Could not load pending requests');
+    }
+};
 
     const fetchFriends = async () => {
         try {
@@ -19,7 +29,22 @@ export default function FriendsScreen({ user }: { user: any }) {
         }
     };
 
-    useEffect(() => { fetchFriends(); }, []);
+    useEffect(() => { 
+    fetchFriends(); 
+    fetchPendingRequests();
+}, []);
+const handleAccept = async (friendId: number) => {
+    try {
+        await ApiService.acceptFriendRequest(friendId);
+        Alert.alert('Success', 'Friend request accepted!');
+        fetchFriends();
+        fetchPendingRequests();
+    } catch (error: any) {
+        Alert.alert('Error', error.message);
+    }
+};
+
+
 
     const handleSendRequest = async (targetUserId: number) => {
         try {
@@ -49,6 +74,9 @@ export default function FriendsScreen({ user }: { user: any }) {
 
     return (
         <ScrollView style={styles.container}>
+            <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                <Text style={styles.backButtonText}>← Back</Text>
+            </TouchableOpacity>
             <Text style={styles.title}>Friends</Text>
 
             {/* Search for users */}
@@ -64,6 +92,17 @@ export default function FriendsScreen({ user }: { user: any }) {
                     <Text style={styles.searchButtonText}>Search</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Pending requests */}
+{pendingRequests.map((r: any) => (
+    <View key={r.id} style={styles.userRow}>
+        <Text style={styles.userName}>{r.senderName}</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => handleAccept(r.id)}>
+            <Text style={styles.addButtonText}>Accept</Text>
+        </TouchableOpacity>
+    </View>
+))}
+
 
             {/* Search results */}
             {users.length > 0 && (
@@ -86,14 +125,16 @@ export default function FriendsScreen({ user }: { user: any }) {
                 {friends.length === 0 ? (
                     <Text style={styles.emptyText}>No friends yet. Search for users above!</Text>
                 ) : (
-                    friends.map((f: any) => (
-                        <View key={f.id} style={styles.friendRow}>
-                            <Text style={styles.userName}>Friend ID: {f.friendId}</Text>
-                            <Text style={styles.status}>{f.status}</Text>
-                        </View>
-                    ))
+                   friends.map((f: any) => (
+    <View key={f.id} style={styles.friendRow}>
+        <Text style={styles.userName}>{f.friendName}</Text>
+        <Text style={styles.status}>{f.status}</Text>
+    </View>
+))
                 )}
             </View>
+
+            
         </ScrollView>
     );
 }
@@ -115,4 +156,6 @@ const styles = StyleSheet.create({
     addButton: { backgroundColor: '#4CAF50', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
     addButtonText: { color: '#fff', fontWeight: 'bold' },
     emptyText: { color: '#718096', textAlign: 'center', paddingVertical: 20 },
+    backButton: { marginBottom: 15 },
+    backButtonText: { color: '#2B6CB0', fontSize: 16, fontWeight: '600' },
 });

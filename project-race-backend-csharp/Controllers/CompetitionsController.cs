@@ -15,27 +15,26 @@ namespace project_race_backend_csharp.Controllers
             _context = context;
         }
 
-        // POST: api/competitions - Create a new competition
         [HttpPost]
         public async Task<IActionResult> CreateCompetition([FromBody] CreateCompetitionModel model)
         {
             var competition = new Competition
-{
-    Name = model.Name,
-    StartDate = model.StartDate != null ? DateOnly.Parse(model.StartDate) : null,
-    EndDate = model.EndDate != null ? DateOnly.Parse(model.EndDate) : null,
-    CreatedBy = model.CreatedBy,
-    CreatedAt = DateTime.UtcNow
-};
+            {
+                Name = model.Name,
+                StartDate = model.StartDate != null ? DateOnly.Parse(model.StartDate) : null,
+                EndDate = model.EndDate != null ? DateOnly.Parse(model.EndDate) : null,
+                CreatedBy = model.CreatedBy,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.Competitions.Add(competition);
             await _context.SaveChangesAsync();
 
-            // Add creator as super_admin
             var member = new CompetitionMember
             {
                 CompetitionId = competition.Id,
                 UserId = model.CreatedBy,
+                Role = "super_admin",
                 JoinedAt = DateTime.UtcNow
             };
 
@@ -45,7 +44,6 @@ namespace project_race_backend_csharp.Controllers
             return Ok(new { message = "Competition created!", competitionId = competition.Id });
         }
 
-        // GET: api/competitions/user/5 - Get all competitions for a user
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetUserCompetitions(int userId)
         {
@@ -68,7 +66,6 @@ namespace project_race_backend_csharp.Controllers
             return Ok(competitions);
         }
 
-        // GET: api/competitions/5 - Get competition details
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCompetition(int id)
         {
@@ -89,13 +86,71 @@ namespace project_race_backend_csharp.Controllers
 
             return Ok(competition);
         }
+
+        [HttpPost("invite")]
+        public async Task<IActionResult> InviteToCompetition([FromBody] InviteModel model)
+        {
+            try
+            {
+                var exists = await _context.CompetitionMembers
+                    .AnyAsync(cm => cm.CompetitionId == model.CompetitionId && cm.UserId == model.UserId);
+
+                if (exists)
+                    return BadRequest(new { message = "User is already in this competition." });
+
+                var member = new CompetitionMember
+                {
+                    CompetitionId = model.CompetitionId,
+                    UserId = model.UserId,
+                    Role = "participant",
+                    JoinedAt = DateTime.UtcNow
+                };
+
+                _context.CompetitionMembers.Add(member);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "User invited successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/members")]
+        public async Task<IActionResult> GetMembers(int id)
+        {
+            var members = await _context.CompetitionMembers
+                .Where(cm => cm.CompetitionId == id)
+                .Join(_context.Users,
+                    cm => cm.UserId,
+                    u => u.Id,
+                    (cm, u) => new
+                    {
+                        cm.Id,
+                        cm.UserId,
+                        u.Name,
+                        cm.Role,
+                        cm.Tier,
+                        cm.JoinedAt
+                    })
+                .ToListAsync();
+
+            return Ok(members);
+        }
     }
 
     public class CreateCompetitionModel
-{
-    public string Name { get; set; } = string.Empty;
-    public string? StartDate { get; set; }
-    public string? EndDate { get; set; }
-    public int CreatedBy { get; set; }
-}
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? StartDate { get; set; }
+        public string? EndDate { get; set; }
+        public int CreatedBy { get; set; }
+    }
+
+    public class InviteModel
+    {
+        public int CompetitionId { get; set; }
+        public int UserId { get; set; }
+    }
 }

@@ -15,24 +15,31 @@ namespace project_race_backend_csharp.Controllers
             _context = context;
         }
 
-        // GET: api/friends/user/5 - Get all friends for a user
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetFriends(int userId)
+       [HttpGet("user/{userId}")]
+
+public async Task<IActionResult> GetFriends(int userId)
+{
+    var friends = await _context.Friends
+        .Where(f => (f.UserId1 == userId || f.UserId2 == userId))
+        .ToListAsync();
+
+    var result = new List<object>();
+    foreach (var f in friends)
+    {
+        var friendId = f.UserId1 == userId ? f.UserId2 : f.UserId1;
+        var friendUser = await _context.Users.FindAsync(friendId);
+        result.Add(new
         {
-            var friends = await _context.Friends
-                .Where(f => f.UserId1 == userId || f.UserId2 == userId)
-                .Select(f => new
-                {
-                    f.Id,
-                    f.Status,
-                    FriendId = f.UserId1 == userId ? f.UserId2 : f.UserId1
-                })
-                .ToListAsync();
+            f.Id,
+            f.Status,
+            FriendId = friendId,
+            FriendName = friendUser?.Name ?? "Unknown"
+        });
+    }
 
-            return Ok(friends);
-        }
+    return Ok(result);
+}
 
-        // POST: api/friends/request - Send friend request
         [HttpPost("request")]
         public async Task<IActionResult> SendRequest([FromBody] FriendRequestModel model)
         {
@@ -58,7 +65,6 @@ namespace project_race_backend_csharp.Controllers
             return Ok(new { message = "Friend request sent!" });
         }
 
-        // PUT: api/friends/accept/5 - Accept friend request
         [HttpPut("accept/{friendId}")]
         public async Task<IActionResult> AcceptRequest(int friendId)
         {
@@ -70,6 +76,27 @@ namespace project_race_backend_csharp.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Friend request accepted!" });
+        }
+
+        [HttpGet("pending/{userId}")]
+        public async Task<IActionResult> GetPendingRequests(int userId)
+        {
+            var pending = await _context.Friends
+                .Where(f => f.UserId2 == userId && f.Status == "pending")
+                .Join(_context.Users,
+                    f => f.UserId1,
+                    u => u.Id,
+                    (f, u) => new
+                    {
+                        f.Id,
+                        f.UserId1,
+                        SenderName = u.Name,
+                        f.Status,
+                        f.CreatedAt
+                    })
+                .ToListAsync();
+
+            return Ok(pending);
         }
     }
 
