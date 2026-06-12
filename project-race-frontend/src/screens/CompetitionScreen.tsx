@@ -31,38 +31,47 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
     };
 
     const fetchMembers = async (competitionId: number) => {
-    try {
-        const data = await ApiService.getCompetitionMembers(competitionId);
-        setMembers(data);
-    } catch (error) {
-        Alert.alert('Error', 'Could not load members.');
-    }
-};
+        try {
+            const data = await ApiService.getCompetitionMembers(competitionId);
+            setMembers(data);
+        } catch (error) {
+            Alert.alert('Error', 'Could not load members.');
+        }
+    };
 
-const fetchFriends = async () => {
-    try {
-        const data = await ApiService.getFriends(user.id);
-        setFriends(data);
-    } catch (error) {
-        console.error('Could not load friends');
-    }
-};
+    const fetchFriends = async () => {
+        try {
+            const data = await ApiService.getFriends(user.id);
+            setFriends(data);
+        } catch (error) {
+            console.error('Could not load friends');
+        }
+    };
 
-const handleSelectCompetition = (competition: any) => {
-    setSelectedCompetition(competition);
-    fetchMembers(competition.id);
-    fetchFriends();
-};
+    const handleSelectCompetition = (competition: any) => {
+        setSelectedCompetition(competition);
+        fetchMembers(competition.id);
+        fetchFriends();
+    };
 
-const handleInvite = async (friendId: number) => {
-    try {
-        await ApiService.inviteToCompetition(selectedCompetition.id, friendId);
-        Alert.alert('Success', 'Friend invited!');
-        fetchMembers(selectedCompetition.id);
-    } catch (error: any) {
-        Alert.alert('Error', error.message || 'Could not invite friend.');
-    }
-};
+    const handleInvite = async (friendId: number) => {
+        try {
+            await ApiService.inviteToCompetition(selectedCompetition.id, friendId);
+            Alert.alert('Success', 'Friend invited!');
+            fetchMembers(selectedCompetition.id);
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not invite friend.');
+        }
+    };
+
+    const handleUpdateTier = async (memberId: number, tier: number) => {
+        try {
+            await ApiService.updateMemberTier(memberId, tier);
+            fetchMembers(selectedCompetition.id);
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not update tier.');
+        }
+    };
 
     useEffect(() => { fetchCompetitions(); }, []);
 
@@ -97,7 +106,7 @@ const handleInvite = async (friendId: number) => {
         );
     }
 
-   return (
+    return (
         <ScrollView style={styles.container}>
             <TouchableOpacity onPress={onBack} style={styles.backButton}>
                 <Text style={styles.backButtonText}>← Back</Text>
@@ -112,12 +121,32 @@ const handleInvite = async (friendId: number) => {
                     <Text style={styles.title}>{selectedCompetition.name}</Text>
                     <Text style={styles.competitionDate}>{selectedCompetition.startDate} → {selectedCompetition.endDate}</Text>
 
+                    {/* Members */}
                     <View style={[styles.section, { marginTop: 20 }]}>
                         <Text style={styles.sectionTitle}>Members ({members.length})</Text>
                         {members.map((m: any) => (
                             <View key={m.id} style={styles.userRow}>
-                                <Text style={styles.userName}>{m.name}</Text>
-                                <Text style={styles.status}>{m.role}</Text>
+                                <View>
+                                    <Text style={styles.userName}>{m.name}</Text>
+                                    <Text style={styles.status}>{m.role}</Text>
+                                </View>
+                                <View style={styles.tierButtons}>
+                                    {[1, 2, 3].map((tier) => (
+                                        <TouchableOpacity
+                                            key={tier}
+                                            style={[
+                                                styles.tierButton,
+                                                m.tier === tier && styles.tierButtonActive
+                                            ]}
+                                            onPress={() => handleUpdateTier(m.id, tier)}
+                                        >
+                                            <Text style={[
+                                                styles.tierButtonText,
+                                                m.tier === tier && styles.tierButtonTextActive
+                                            ]}>T{tier}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
                             </View>
                         ))}
                     </View>
@@ -255,4 +284,9 @@ const styles = StyleSheet.create({
     status: { fontSize: 14, color: '#718096' },
     addButton: { backgroundColor: '#4CAF50', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
     addButtonText: { color: '#fff', fontWeight: 'bold' },
+    tierButtons: { flexDirection: 'row', gap: 5 },
+    tierButton: { width: 35, height: 35, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
+    tierButtonActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+    tierButtonText: { fontSize: 12, color: '#718096', fontWeight: 'bold' },
+    tierButtonTextActive: { color: '#fff' },
 });

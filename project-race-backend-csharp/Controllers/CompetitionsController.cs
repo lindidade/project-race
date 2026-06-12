@@ -138,6 +138,26 @@ namespace project_race_backend_csharp.Controllers
 
             return Ok(members);
         }
+
+        [HttpPut("members/{memberId}/tier")]
+        public async Task<IActionResult> UpdateMemberTier([FromBody] UpdateTierModel model, int memberId)
+        {
+            try
+            {
+                var member = await _context.CompetitionMembers.FindAsync(memberId);
+                if (member == null)
+                    return NotFound(new { message = "Member not found." });
+
+                member.Tier = model.Tier;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Tier updated!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 
     public class CreateCompetitionModel
@@ -152,5 +172,10 @@ namespace project_race_backend_csharp.Controllers
     {
         public int CompetitionId { get; set; }
         public int UserId { get; set; }
+    }
+
+    public class UpdateTierModel
+    {
+        public int Tier { get; set; }
     }
 }
