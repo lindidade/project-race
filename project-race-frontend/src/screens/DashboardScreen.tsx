@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import ApiService from '../services/ApiService';
 
-export default function DashboardScreen({ user, onLogout, onNavigateToFriends }: { 
+export default function DashboardScreen({ user, onLogout, onNavigateToFriends, onNavigateToLeaderboard, onNavigateToCompetition }: { 
     user: any, 
     onLogout: () => void,
-    onNavigateToFriends: () => void
+    onNavigateToFriends: () => void,
+    onNavigateToLeaderboard: () => void,
+    onNavigateToCompetition: () => void
 }) {
+
     const [distance, setDistance] = useState('');
     const [stats, setStats] = useState({ totalDistance: 0, activityCount: 0 });
     const [loading, setLoading] = useState(true);
@@ -95,6 +98,15 @@ export default function DashboardScreen({ user, onLogout, onNavigateToFriends }:
 <TouchableOpacity style={styles.friendsButton} onPress={onNavigateToFriends}>
     <Text style={styles.friendsButtonText}>👥 My Friends</Text>
 </TouchableOpacity>
+
+<TouchableOpacity style={styles.leaderboardButton} onPress={onNavigateToLeaderboard}>
+    <Text style={styles.leaderboardButtonText}>🏆 Leaderboard</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.competitionButton} onPress={onNavigateToCompetition}>
+    <Text style={styles.competitionButtonText}>🏁 Competitions</Text>
+</TouchableOpacity>
+
             </ScrollView>
     );
 }
@@ -117,4 +129,8 @@ const styles = StyleSheet.create({
     buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     friendsButton: { backgroundColor: '#2B6CB0', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 15 },
     friendsButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    leaderboardButton: { backgroundColor: '#D69E2E', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+    leaderboardButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    competitionButton: { backgroundColor: '#805AD5', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+    competitionButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
