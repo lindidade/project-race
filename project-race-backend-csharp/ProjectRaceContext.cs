@@ -73,33 +73,50 @@ public class ProjectRaceContext : DbContext
         .OnDelete(DeleteBehavior.Restrict);
 });
 
-modelBuilder.Entity<CompetitionMember>(entity =>
+        modelBuilder.Entity<CompetitionMember>(entity =>
+        {
+            entity.ToTable("competition_members");
+            entity.HasKey(cm => cm.Id);
+            entity.Property(cm => cm.Id).HasColumnName("id");
+            entity.Property(cm => cm.UserId).HasColumnName("user_id");
+            entity.Property(cm => cm.CompetitionId).HasColumnName("competition_id");
+            entity.Property(cm => cm.Role).HasColumnName("role");
+            entity.Property(cm => cm.Tier).HasColumnName("tier");
+            entity.Property(cm => cm.JoinedAt).HasColumnName("joined_at");
+        });
+
+        modelBuilder.Entity<Competition>(entity =>
+        {
+            entity.ToTable("competitions");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Id).HasColumnName("id");
+            entity.Property(c => c.Name).HasColumnName("name");
+            entity.Property(c => c.StartDate).HasColumnName("start_date");
+            entity.Property(c => c.EndDate).HasColumnName("end_date");
+            entity.Property(c => c.CreatedBy).HasColumnName("created_by");
+            entity.Property(c => c.CreatedAt).HasColumnName("created_at");
+            entity.Ignore(c => c.CreatedByNavigation);
+            entity.Ignore(c => c.CompetitionMembers);
+        });
+
+
+        modelBuilder.Entity<TeamMember>(entity =>
 {
-    entity.ToTable("competition_members");
-    entity.HasKey(cm => cm.Id);
-    entity.Property(cm => cm.Id).HasColumnName("id");
-    entity.Property(cm => cm.UserId).HasColumnName("user_id");
-    entity.Property(cm => cm.CompetitionId).HasColumnName("competition_id");
-    entity.Property(cm => cm.Role).HasColumnName("role");
-    entity.Property(cm => cm.Tier).HasColumnName("tier");
-    entity.Property(cm => cm.JoinedAt).HasColumnName("joined_at");
+    entity.ToTable("team_members");
+    entity.HasKey(tm => tm.Id);
+    entity.Property(tm => tm.Id).HasColumnName("id");
+    entity.Property(tm => tm.UserId).HasColumnName("user_id");
+    entity.Property(tm => tm.TeamId).HasColumnName("team_id");
+    entity.Property(tm => tm.JoinedAt).HasColumnName("joined_at");
 });
 
-modelBuilder.Entity<Competition>(entity =>
-{
-    entity.ToTable("competitions");
-    entity.HasKey(c => c.Id);
-    entity.Property(c => c.Id).HasColumnName("id");
-    entity.Property(c => c.Name).HasColumnName("name");
-    entity.Property(c => c.StartDate).HasColumnName("start_date");
-    entity.Property(c => c.EndDate).HasColumnName("end_date");
-    entity.Property(c => c.CreatedBy).HasColumnName("created_by");
-    entity.Property(c => c.CreatedAt).HasColumnName("created_at");
-    entity.Ignore(c => c.CreatedByNavigation);
-    entity.Ignore(c => c.CompetitionMembers);
-});
-
-          
-        modelBuilder.Entity<TeamMember>().ToTable("team_members");
+        modelBuilder.Entity<Team>(entity =>
+        {
+            entity.ToTable("teams");
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.Id).HasColumnName("id");
+            entity.Property(t => t.Name).HasColumnName("name");
+            entity.Property(t => t.CompetitionId).HasColumnName("competition_id");
+        });
     }
 }

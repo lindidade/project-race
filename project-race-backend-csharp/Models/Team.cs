@@ -9,4 +9,7 @@ public partial class Team
     public string Name { get; set; } = null!;
     public virtual ICollection<Activity> Activities { get; set; } = new List<Activity>();
     public virtual ICollection<TeamMember> TeamMembers { get; set; } = new List<TeamMember>();
+    public int? CompetitionId { get; set; }
 }
+
+
