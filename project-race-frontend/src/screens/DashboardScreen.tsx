@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView, Platform } from 'react-native';
 import ApiService from '../services/ApiService';
 import { Colors } from '../constants/colors';
+import { WebView } from 'react-native-webview';
 
-export default function DashboardScreen({ user, onLogout }: { 
-    user: any, 
+
+export default function DashboardScreen({ user, onLogout }: {
+    user: any,
     onLogout: () => void
-}){
+}) {
 
 
     const [distance, setDistance] = useState('');
@@ -37,7 +39,7 @@ export default function DashboardScreen({ user, onLogout }: {
         setSubmitting(true);
         try {
             await ApiService.saveActivity(user.id, parsedDistance);
-            Alert.alert('Great job! 🎉', `You have logged ${parsedDistance} km.`);
+            Alert.alert('Great job! ', `You have logged ${parsedDistance} km.`);
             setDistance('');
             fetchData();
         } catch (error: any) {
@@ -88,7 +90,27 @@ export default function DashboardScreen({ user, onLogout }: {
                     </View>
                 </View>
 
+                {/* Map */}
+                <View style={styles.mapCard}>
+                    <Text style={styles.formTitle}>Your area 🗺️</Text>
+                    {Platform.OS === 'web' ? (
+                        React.createElement('iframe', {
+                            src: 'https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d10000!2d13.0038!3d55.6050!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sse!4v1620000000000!5m2!1sen!2sse',
+                            width: '100%',
+                            height: '200',
+                            style: { border: 'none', borderRadius: 12 },
+                            loading: 'lazy',
+                        })
+                    ) : (
+                        <WebView
+                            style={styles.map}
+                            source={{ uri: 'https://www.google.com/maps?q=55.6050,13.0038&z=14&output=embed' }}
+                        />
+                    )}
+                </View>
+
                 {/* Log run card */}
+
                 <View style={styles.formCard}>
                     <Text style={styles.formTitle}>Log a run 🏃‍♀️</Text>
                     <TextInput
@@ -112,7 +134,7 @@ export default function DashboardScreen({ user, onLogout }: {
 
             </ScrollView>
 
-           
+
         </SafeAreaView>
     );
 }
@@ -142,4 +164,6 @@ const styles = StyleSheet.create({
     saveButtonText: { color: Colors.white, fontSize: 16, fontWeight: 'bold' },
 
     motivational: { textAlign: 'center', color: Colors.textLight, fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
+    mapCard: { backgroundColor: Colors.white, borderRadius: 20, padding: 16, marginBottom: 20 },
+    map: { width: '100%', height: 200, borderRadius: 12 },
 });
