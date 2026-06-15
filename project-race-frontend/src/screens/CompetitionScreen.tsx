@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView, Platform } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import ApiService from '../services/ApiService';
+import { Colors } from '../constants/colors';
 
-export default function CompetitionScreen({ user }: { user: any}) {
+export default function CompetitionScreen({ user }: { user: any }) {
     const [competitions, setCompetitions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -15,6 +16,8 @@ export default function CompetitionScreen({ user }: { user: any}) {
     const [showEndPicker, setShowEndPicker] = useState(false);
     const [selectedCompetition, setSelectedCompetition] = useState<any>(null);
     const [members, setMembers] = useState<any[]>([]);
+    const [teams, setTeams] = useState<any[]>([]);
+    const [numberOfTeams, setNumberOfTeams] = useState(2);
     const [friends, setFriends] = useState<any[]>([]);
 
     const today = new Date();
@@ -48,9 +51,29 @@ export default function CompetitionScreen({ user }: { user: any}) {
         }
     };
 
+    const fetchTeams = async (competitionId: number) => {
+        try {
+            const data = await ApiService.getTeams(competitionId);
+            setTeams(data);
+        } catch (error) {
+            console.error('Could not load teams');
+        }
+    };
+
+    const handleRandomizeTeams = async () => {
+        try {
+            const data = await ApiService.randomizeTeams(selectedCompetition.id, numberOfTeams);
+            setTeams(data);
+            Alert.alert('Success', 'Teams randomized!');
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not randomize teams.');
+        }
+    };
+
     const handleSelectCompetition = (competition: any) => {
         setSelectedCompetition(competition);
         fetchMembers(competition.id);
+        fetchTeams(competition.id);
         fetchFriends();
     };
 
@@ -122,7 +145,7 @@ export default function CompetitionScreen({ user }: { user: any}) {
 
                     {/* Members */}
                     <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>Members ({members.length})</Text>
+                        <Text style={styles.sectionTitle}>Participants ({members.length})</Text>
                         {members.map((m: any) => (
                             <View key={m.id} style={styles.memberRow}>
                                 <View style={styles.avatar}>
@@ -150,6 +173,57 @@ export default function CompetitionScreen({ user }: { user: any}) {
                     </View>
 
                     {/* Invite Friends */}
+                    {/* Teams */}
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>Choose number of teams</Text>
+
+                        {/* Number of teams selector */}
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                            {[2, 3, 4].map(n => (
+                                <TouchableOpacity
+                                    key={n}
+                                    style={[
+                                        styles.tierButton,
+                                        numberOfTeams === n && styles.tierButtonActive
+                                    ]}
+                                    onPress={() => setNumberOfTeams(n)}
+                                >
+                                    <Text style={[
+                                        styles.tierButtonText,
+                                        numberOfTeams === n && styles.tierButtonTextActive
+                                    ]}>{n}</Text>
+                                </TouchableOpacity>
+                            ))}
+                            <Text style={{ color: Colors.textMedium, alignSelf: 'center', marginLeft: 4 }}>teams</Text>
+                        </View>
+
+                        {/* Randomize button */}
+                        <TouchableOpacity style={styles.submitButton} onPress={handleRandomizeTeams}>
+                            <Text style={styles.submitButtonText}>🎲 Randomize Teams</Text>
+                        </TouchableOpacity>
+
+                        {/* Teams result */}
+                        {teams.length > 0 && teams.map((team: any) => (
+                            <View key={team.teamId} style={{ marginTop: 14 }}>
+                                <Text style={{ fontWeight: 'bold', color: Colors.textDark, marginBottom: 6 }}>
+                                    {team.teamName}
+                                </Text>
+                                {team.members.map((m: any) => (
+                                    <View key={m.userId} style={styles.memberRow}>
+                                        <View style={styles.avatar}>
+                                            <Text style={styles.avatarText}>{m.name?.charAt(0).toUpperCase()}</Text>
+                                        </View>
+                                        <View style={styles.memberInfo}>
+                                            <Text style={styles.memberName}>{m.name}</Text>
+                                        </View>
+                                        <View style={[styles.tierButton, styles.tierButtonActive]}>
+                                            <Text style={styles.tierButtonTextActive}>T{m.tier}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        ))}
+                    </View>
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Invite Friends</Text>
                         {friends.filter((f: any) => f.status === 'accepted').length === 0 ? (
@@ -160,7 +234,9 @@ export default function CompetitionScreen({ user }: { user: any}) {
                                     <View style={styles.avatar}>
                                         <Text style={styles.avatarText}>{f.friendName?.charAt(0).toUpperCase()}</Text>
                                     </View>
-                                    <Text style={styles.memberName}>{f.friendName}</Text>
+                                    <View style={styles.memberInfo}>
+                                        <Text style={styles.memberName}>{f.friendName}</Text>
+                                    </View>
                                     <TouchableOpacity style={styles.inviteButton} onPress={() => handleInvite(f.friendId)}>
                                         <Text style={styles.inviteButtonText}>Invite</Text>
                                     </TouchableOpacity>
@@ -179,7 +255,7 @@ export default function CompetitionScreen({ user }: { user: any}) {
             <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
 
                 {/* Header */}
-                <View style={styles.header}>                   
+                <View style={styles.header}>
                     <Text style={styles.title}>Competitions</Text>
                 </View>
 
@@ -283,48 +359,48 @@ export default function CompetitionScreen({ user }: { user: any}) {
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#FAFAF7' },
+    safeArea: { flex: 1, backgroundColor: Colors.background },
     container: { flex: 1 },
     scrollContent: { padding: 20, paddingBottom: 40 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF7' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
 
     header: { marginBottom: 20 },
     backButton: { marginBottom: 8 },
-    backButtonText: { color: '#7CB987', fontSize: 16, fontWeight: '600' },
-    title: { fontSize: 28, fontWeight: 'bold', color: '#2D4A2D' },
-    dateText: { fontSize: 13, color: '#7A9E7A', marginTop: 4, marginBottom: 16 },
+    backButtonText: { color: Colors.primary, fontSize: 16, fontWeight: '600' },
+    title: { fontSize: 28, fontWeight: 'bold', color: Colors.textDark },
+    dateText: { fontSize: 13, color: Colors.textMedium, marginTop: 4, marginBottom: 16 },
 
-    createButton: { backgroundColor: '#7CB987', height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    createButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    createButton: { backgroundColor: Colors.primary, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+    createButtonText: { color: Colors.white, fontSize: 16, fontWeight: 'bold' },
 
-    card: { backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#2D4A2D', marginBottom: 14 },
+    card: { backgroundColor: Colors.white, borderRadius: 20, padding: 18, marginBottom: 16 },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.textDark, marginBottom: 14 },
 
-    input: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, fontSize: 16, borderWidth: 1, borderColor: '#D4E8D4', color: '#2D4A2D' },
-    datePicker: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, borderWidth: 1, borderColor: '#D4E8D4', justifyContent: 'center' },
-    datePickerText: { fontSize: 16, color: '#2D4A2D' },
-    submitButton: { backgroundColor: '#7CB987', height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    submitButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    input: { height: 50, backgroundColor: Colors.background, borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, fontSize: 16, borderWidth: 1, borderColor: Colors.cardBorder, color: Colors.textDark },
+    datePicker: { height: 50, backgroundColor: Colors.background, borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, borderWidth: 1, borderColor: Colors.cardBorder, justifyContent: 'center' },
+    datePickerText: { fontSize: 16, color: Colors.textDark },
+    submitButton: { backgroundColor: Colors.primary, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    submitButtonText: { color: Colors.white, fontSize: 16, fontWeight: 'bold' },
 
-    competitionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F4F0', gap: 12 },
-    competitionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFE5D9', alignItems: 'center', justifyContent: 'center' },
-    competitionName: { fontSize: 15, fontWeight: '600', color: '#2D4A2D' },
+    competitionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder, gap: 12 },
+    competitionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.secondary, alignItems: 'center', justifyContent: 'center' },
+    competitionName: { fontSize: 15, fontWeight: '600', color: Colors.textDark },
 
-    memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0F4F0' },
-    avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#D4EDDA', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-    avatarText: { color: '#3A7D44', fontWeight: 'bold', fontSize: 15 },
+    memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+    avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+    avatarText: { color: Colors.primary, fontWeight: 'bold', fontSize: 15 },
     memberInfo: { flex: 1 },
-    memberName: { fontSize: 15, color: '#2D4A2D', fontWeight: '500' },
-    memberRole: { fontSize: 12, color: '#7A9E7A' },
+    memberName: { fontSize: 15, color: Colors.textDark, fontWeight: '500' },
+    memberRole: { fontSize: 12, color: Colors.textMedium },
 
     tierButtons: { flexDirection: 'row', gap: 5 },
-    tierButton: { width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#D4E8D4', alignItems: 'center', justifyContent: 'center' },
-    tierButtonActive: { backgroundColor: '#7CB987', borderColor: '#7CB987' },
-    tierButtonText: { fontSize: 12, color: '#7A9E7A', fontWeight: 'bold' },
-    tierButtonTextActive: { color: '#fff' },
+    tierButton: { width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: Colors.cardBorder, alignItems: 'center', justifyContent: 'center' },
+    tierButtonActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+    tierButtonText: { fontSize: 12, color: Colors.textMedium, fontWeight: 'bold' },
+    tierButtonTextActive: { color: Colors.white },
 
-    inviteButton: { backgroundColor: '#F4A261', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-    inviteButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+    inviteButton: { backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+    inviteButtonText: { color: Colors.white, fontWeight: 'bold', fontSize: 13 },
 
-    emptyText: { color: '#A8B8A0', textAlign: 'center', paddingVertical: 20, fontSize: 14 },
+    emptyText: { color: Colors.textLight, textAlign: 'center', paddingVertical: 20, fontSize: 14 },
 });

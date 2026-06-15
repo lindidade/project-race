@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../constants/colors';
 
 type Screen = 'dashboard' | 'friends' | 'leaderboard' | 'competition';
 
@@ -10,10 +12,10 @@ interface BottomNavProps {
 
 export default function BottomNav({ activeScreen, onNavigate }: BottomNavProps) {
     const tabs = [
-        { screen: 'dashboard' as Screen, label: 'Home', icon: '🏠' },
-        { screen: 'friends' as Screen, label: 'Friends', icon: '👥' },
-        { screen: 'leaderboard' as Screen, label: 'Leaderboard', icon: '🏆' },
-        { screen: 'competition' as Screen, label: 'Competitions', icon: '🏁' },
+        { screen: 'dashboard' as Screen, label: 'Home', icon: 'home', iconActive: 'home' },
+        { screen: 'friends' as Screen, label: 'Friends', icon: 'people-outline', iconActive: 'people' },
+        { screen: 'leaderboard' as Screen, label: 'Leaderboard', icon: 'trophy-outline', iconActive: 'trophy' },
+        { screen: 'competition' as Screen, label: 'Competitions', icon: 'flag-outline', iconActive: 'flag' },
     ];
 
     return (
@@ -26,7 +28,11 @@ export default function BottomNav({ activeScreen, onNavigate }: BottomNavProps) 
                         style={styles.tab}
                         onPress={() => onNavigate(tab.screen)}
                     >
-                        <Text style={styles.icon}>{tab.icon}</Text>
+                        <Ionicons
+                            name={isActive ? tab.iconActive : tab.icon as any}
+                            size={24}
+                            color={isActive ? Colors.primary : Colors.textLight}
+                        />
                         <Text style={[styles.label, isActive && styles.labelActive]}>
                             {tab.label}
                         </Text>
@@ -41,18 +47,17 @@ export default function BottomNav({ activeScreen, onNavigate }: BottomNavProps) 
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
+        backgroundColor: Colors.white,
         paddingVertical: 10,
         paddingHorizontal: 10,
         borderTopWidth: 1,
-        borderTopColor: '#E8EDE8',
+        borderTopColor: Colors.cardBorder,
     },
     tab: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-    icon: { fontSize: 22, marginBottom: 3 },
-    label: { fontSize: 11, color: '#A8B8A0' },
-    labelActive: { color: '#4A6741', fontWeight: '600' },
+    label: { fontSize: 11, color: Colors.textLight, marginTop: 3 },
+    labelActive: { color: Colors.primary, fontWeight: '600' },
     activeIndicator: {
         width: 4, height: 4, borderRadius: 2,
-        backgroundColor: '#4A6741', marginTop: 3
+        backgroundColor: Colors.primary, marginTop: 3
     },
 });

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView } from 'react-native';
 import ApiService from '../services/ApiService';
+import { Colors } from '../constants/colors';
 
-export default function DashboardScreen({ user, onLogout, onNavigateToFriends, onNavigateToLeaderboard, onNavigateToCompetition }: {
-    user: any,
-    onLogout: () => void,
-    onNavigateToFriends: () => void,
-    onNavigateToLeaderboard: () => void,
-    onNavigateToCompetition: () => void
-}) {
+export default function DashboardScreen({ user, onLogout }: { 
+    user: any, 
+    onLogout: () => void
+}){
+
+
     const [distance, setDistance] = useState('');
     const [stats, setStats] = useState({ totalDistance: 0, activityCount: 0 });
     const [loading, setLoading] = useState(true);
@@ -72,17 +72,17 @@ export default function DashboardScreen({ user, onLogout, onNavigateToFriends, o
 
                 {/* Stats cards */}
                 <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: '#D4EDDA' }]}>
+                    <View style={[styles.statCard, { backgroundColor: Colors.primaryLight }]}>
                         <Text style={styles.statEmoji}>🏃</Text>
                         <Text style={styles.statLabel}>Total distance</Text>
-                        <Text style={[styles.statValue, { color: '#3A7D44' }]}>
+                        <Text style={[styles.statValue, { color: Colors.primary }]}>
                             {stats.totalDistance.toFixed(1)} km
                         </Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: '#FFE5D9' }]}>
+                    <View style={[styles.statCard, { backgroundColor: Colors.secondaryLight }]}>
                         <Text style={styles.statEmoji}>🔥</Text>
                         <Text style={styles.statLabel}>Activity count</Text>
-                        <Text style={[styles.statValue, { color: '#C4622D' }]}>
+                        <Text style={[styles.statValue, { color: Colors.primary }]}>
                             {stats.activityCount} sessions
                         </Text>
                     </View>
@@ -118,35 +118,28 @@ export default function DashboardScreen({ user, onLogout, onNavigateToFriends, o
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#FAFAF7' },
+    safeArea: { flex: 1, backgroundColor: Colors.background },
     container: { flex: 1 },
     scrollContent: { padding: 20, paddingBottom: 40 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF7' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
 
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 10, marginBottom: 20 },
-    welcomeText: { fontSize: 24, fontWeight: 'bold', color: '#2D4A2D' },
-    subtitle: { fontSize: 14, color: '#7A9E7A', marginTop: 2 },
-    logoutBtn: { backgroundColor: '#FFE5D9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-    logoutText: { color: '#C4622D', fontWeight: '600', fontSize: 13 },
+    welcomeText: { fontSize: 24, fontWeight: 'bold', color: Colors.textDark },
+    subtitle: { fontSize: 14, color: Colors.textMedium, marginTop: 2 },
+    logoutBtn: { backgroundColor: Colors.secondary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+    logoutText: { color: Colors.primary, fontWeight: '600', fontSize: 13 },
 
     statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 12 },
-    statCard: { flex: 1, borderRadius: 20, padding: 18, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+    statCard: { flex: 1, borderRadius: 20, padding: 18, alignItems: 'center' },
     statEmoji: { fontSize: 28, marginBottom: 6 },
-    statLabel: { fontSize: 12, color: '#5A7A5A', fontWeight: '500', marginBottom: 4 },
+    statLabel: { fontSize: 12, color: Colors.textMedium, fontWeight: '500', marginBottom: 4 },
     statValue: { fontSize: 22, fontWeight: 'bold' },
 
-    formCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, marginBottom: 20 },
-    formTitle: { fontSize: 17, fontWeight: 'bold', color: '#2D4A2D', marginBottom: 14 },
-    input: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, fontSize: 16, borderWidth: 1, borderColor: '#D4E8D4', color: '#2D4A2D' },
-    saveButton: { backgroundColor: '#7CB987', height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    formCard: { backgroundColor: Colors.white, borderRadius: 20, padding: 20, marginBottom: 20 },
+    formTitle: { fontSize: 17, fontWeight: 'bold', color: Colors.textDark, marginBottom: 14 },
+    input: { height: 50, backgroundColor: Colors.background, borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, fontSize: 16, borderWidth: 1, borderColor: Colors.cardBorder, color: Colors.textDark },
+    saveButton: { backgroundColor: Colors.primary, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    saveButtonText: { color: Colors.white, fontSize: 16, fontWeight: 'bold' },
 
-    motivational: { textAlign: 'center', color: '#A8B8A0', fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
-
-    bottomNav: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 10, paddingHorizontal: 10, borderTopWidth: 1, borderTopColor: '#EEF2EE', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 5 },
-    navItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-    navIcon: { fontSize: 22, marginBottom: 3 },
-    navIconActive: { fontSize: 22, marginBottom: 3 },
-    navLabel: { fontSize: 11, color: '#A8B8A0' },
-    navLabelActive: { color: '#7CB987', fontWeight: '600' },
+    motivational: { textAlign: 'center', color: Colors.textLight, fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
 });

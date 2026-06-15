@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
 import ApiService from '../services/ApiService';
+import { Colors } from '../constants/colors';
 
 export default function LoginScreen({ onLoginSuccess, onNavigateToRegister }: { 
     onLoginSuccess: (user: any) => void, 
@@ -57,12 +58,12 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister }: {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#F0F4F8' },
-    title: { fontSize: 32, fontWeight: 'bold', color: '#1A202C', marginBottom: 10, textAlign: 'center' },
-    subtitle: { fontSize: 16, color: '#718096', marginBottom: 30, textAlign: 'center' },
-    input: { height: 50, backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0', color: '#1A202C' },
-    button: { backgroundColor: '#4CAF50', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-    buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+    container: { flex: 1, justifyContent: 'center', padding: 30, backgroundColor: Colors.background },
+    title: { fontSize: 32, fontWeight: 'bold', color: Colors.textDark, marginBottom: 8, textAlign: 'center' },
+    subtitle: { fontSize: 16, color: Colors.textMedium, marginBottom: 40, textAlign: 'center' },
+    input: { height: 50, backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 15, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: Colors.cardBorder, color: Colors.textDark },
+    button: { backgroundColor: Colors.primary, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+    buttonText: { color: Colors.white, fontSize: 18, fontWeight: 'bold' },
     linkButton: { marginTop: 20, alignItems: 'center' },
-    linkText: { color: '#2B6CB0', fontSize: 14, fontWeight: '500' },
+    linkText: { color: Colors.primary, fontSize: 14, fontWeight: '500' },
 });

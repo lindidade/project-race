@@ -283,6 +283,41 @@ getPendingRequests: async (userId: number) => {
             throw error;
         }
     },
+
+    randomizeTeams: async (competitionId: number, numberOfTeams: number) => {
+    try {
+        const token = await AsyncStorage.getItem('userToken');
+        const response = await fetch(`${API_URL}/competitions/${competitionId}/randomize-teams`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ numberOfTeams })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not randomize teams');
+        return data;
+    } catch (error: any) {
+        console.error('API RandomizeTeams Error:', error.message);
+        throw error;
+    }
+},
+
+getTeams: async (competitionId: number) => {
+    try {
+        const token = await AsyncStorage.getItem('userToken');
+        const response = await fetch(`${API_URL}/competitions/${competitionId}/teams`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not load teams');
+        return data;
+    } catch (error: any) {
+        console.error('API GetTeams Error:', error.message);
+        throw error;
+    }
+},
 };
 
 export default ApiService;
