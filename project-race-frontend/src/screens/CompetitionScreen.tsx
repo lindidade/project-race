@@ -203,26 +203,36 @@ export default function CompetitionScreen({ user }: { user: any }) {
                         </TouchableOpacity>
 
                         {/* Teams result */}
-                        {teams.length > 0 && teams.map((team: any) => (
-                            <View key={team.teamId} style={{ marginTop: 14 }}>
-                                <Text style={{ fontWeight: 'bold', color: Colors.textDark, marginBottom: 6 }}>
-                                    {team.teamName}
-                                </Text>
-                                {team.members.map((m: any) => (
-                                    <View key={m.userId} style={styles.memberRow}>
-                                        <View style={styles.avatar}>
-                                            <Text style={styles.avatarText}>{m.name?.charAt(0).toUpperCase()}</Text>
-                                        </View>
-                                        <View style={styles.memberInfo}>
-                                            <Text style={styles.memberName}>{m.name}</Text>
-                                        </View>
-                                        <View style={[styles.tierButton, styles.tierButtonActive]}>
-                                            <Text style={styles.tierButtonTextActive}>T{m.tier}</Text>
+                        {/* Teams result */}
+                        {teams.length > 0 && (
+                            <View style={{ marginTop: 16, gap: 12 }}>
+                                {teams.map((team: any, index: number) => (
+                                    <View key={team.teamId} style={[
+                                        styles.teamCard,
+                                        index % 2 === 0 ? styles.teamCard1 : styles.teamCard2
+                                    ]}>
+                                        <Text style={styles.teamCardTitle}>{team.teamName}</Text>
+                                        <View style={styles.teamMembersRow}>
+                                            {team.members.map((m: any) => (
+                                                <View key={m.userId} style={styles.teamMemberBubble}>
+                                                    <View style={styles.teamAvatar}>
+                                                        <Text style={styles.teamAvatarText}>
+                                                            {m.name?.charAt(0).toUpperCase()}
+                                                        </Text>
+                                                    </View>
+                                                    <Text style={styles.teamMemberName} numberOfLines={1}>
+                                                        {m.name?.split(' ')[0]}
+                                                    </Text>
+                                                    <View style={styles.teamTierBadge}>
+                                                        <Text style={styles.teamTierText}>T{m.tier}</Text>
+                                                    </View>
+                                                </View>
+                                            ))}
                                         </View>
                                     </View>
                                 ))}
                             </View>
-                        ))}
+                        )}
                     </View>
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Invite Friends</Text>
@@ -403,4 +413,16 @@ const styles = StyleSheet.create({
     inviteButtonText: { color: Colors.white, fontWeight: 'bold', fontSize: 13 },
 
     emptyText: { color: Colors.textLight, textAlign: 'center', paddingVertical: 20, fontSize: 14 },
+
+    teamCard: { borderRadius: 20, padding: 16, marginBottom: 4 },
+    teamCard1: { backgroundColor: Colors.primaryLight },
+    teamCard2: { backgroundColor: Colors.secondaryLight },
+    teamCardTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.textDark, marginBottom: 12 },
+    teamMembersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    teamMemberBubble: { alignItems: 'center', width: 64 },
+    teamAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+    teamAvatarText: { fontSize: 20, fontWeight: 'bold', color: Colors.primary },
+    teamMemberName: { fontSize: 11, color: Colors.textDark, fontWeight: '500', textAlign: 'center' },
+    teamTierBadge: { backgroundColor: Colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 2 },
+    teamTierText: { color: Colors.white, fontSize: 10, fontWeight: 'bold' },
 });
