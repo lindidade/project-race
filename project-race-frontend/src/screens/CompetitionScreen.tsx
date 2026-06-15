@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView, Platform } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import ApiService from '../services/ApiService';
 
-export default function CompetitionScreen({ user, onBack }: { user: any, onBack: () => void }) {
+export default function CompetitionScreen({ user }: { user: any}) {
     const [competitions, setCompetitions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -101,49 +101,47 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
     if (loading) {
         return (
             <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#4CAF50" />
+                <ActivityIndicator size="large" color="#7CB987" />
             </View>
         );
     }
 
-    return (
-        <ScrollView style={styles.container}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>🏁 Competitions</Text>
-
-            {selectedCompetition ? (
-                <View>
+    // Competition detail view
+    if (selectedCompetition) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
                     <TouchableOpacity onPress={() => setSelectedCompetition(null)} style={styles.backButton}>
                         <Text style={styles.backButtonText}>← Back to competitions</Text>
                     </TouchableOpacity>
+
                     <Text style={styles.title}>{selectedCompetition.name}</Text>
-                    <Text style={styles.competitionDate}>{selectedCompetition.startDate} → {selectedCompetition.endDate}</Text>
+                    <Text style={styles.dateText}>
+                        {selectedCompetition.startDate} → {selectedCompetition.endDate}
+                    </Text>
 
                     {/* Members */}
-                    <View style={[styles.section, { marginTop: 20 }]}>
+                    <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Members ({members.length})</Text>
                         {members.map((m: any) => (
-                            <View key={m.id} style={styles.userRow}>
-                                <View>
-                                    <Text style={styles.userName}>{m.name}</Text>
-                                    <Text style={styles.status}>{m.role}</Text>
+                            <View key={m.id} style={styles.memberRow}>
+                                <View style={styles.avatar}>
+                                    <Text style={styles.avatarText}>{m.name?.charAt(0).toUpperCase()}</Text>
+                                </View>
+                                <View style={styles.memberInfo}>
+                                    <Text style={styles.memberName}>{m.name}</Text>
+                                    <Text style={styles.memberRole}>{m.role}</Text>
                                 </View>
                                 <View style={styles.tierButtons}>
                                     {[1, 2, 3].map((tier) => (
                                         <TouchableOpacity
                                             key={tier}
-                                            style={[
-                                                styles.tierButton,
-                                                m.tier === tier && styles.tierButtonActive
-                                            ]}
+                                            style={[styles.tierButton, m.tier === tier && styles.tierButtonActive]}
                                             onPress={() => handleUpdateTier(m.id, tier)}
                                         >
-                                            <Text style={[
-                                                styles.tierButtonText,
-                                                m.tier === tier && styles.tierButtonTextActive
-                                            ]}>T{tier}</Text>
+                                            <Text style={[styles.tierButtonText, m.tier === tier && styles.tierButtonTextActive]}>
+                                                T{tier}
+                                            </Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -151,142 +149,182 @@ export default function CompetitionScreen({ user, onBack }: { user: any, onBack:
                         ))}
                     </View>
 
-                    <View style={[styles.section, { marginTop: 20 }]}>
+                    {/* Invite Friends */}
+                    <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Invite Friends</Text>
                         {friends.filter((f: any) => f.status === 'accepted').length === 0 ? (
                             <Text style={styles.emptyText}>No accepted friends to invite.</Text>
                         ) : (
                             friends.filter((f: any) => f.status === 'accepted').map((f: any) => (
-                                <View key={f.id} style={styles.userRow}>
-                                    <Text style={styles.userName}>Friend ID: {f.friendId}</Text>
-                                    <TouchableOpacity style={styles.addButton} onPress={() => handleInvite(f.friendId)}>
-                                        <Text style={styles.addButtonText}>Invite</Text>
+                                <View key={f.id} style={styles.memberRow}>
+                                    <View style={styles.avatar}>
+                                        <Text style={styles.avatarText}>{f.friendName?.charAt(0).toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.memberName}>{f.friendName}</Text>
+                                    <TouchableOpacity style={styles.inviteButton} onPress={() => handleInvite(f.friendId)}>
+                                        <Text style={styles.inviteButtonText}>Invite</Text>
                                     </TouchableOpacity>
                                 </View>
                             ))
                         )}
                     </View>
+                </ScrollView>
+            </SafeAreaView>
+        );
+    }
+
+    // Competition list view
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+
+                {/* Header */}
+                <View style={styles.header}>                   
+                    <Text style={styles.title}>Competitions</Text>
                 </View>
-            ) : (
-                <View>
-                    <TouchableOpacity style={styles.createButton} onPress={() => setShowForm(!showForm)}>
-                        <Text style={styles.createButtonText}>+ Create Competition</Text>
-                    </TouchableOpacity>
 
-                    {showForm && (
-                        <View style={styles.form}>
-                            <Text style={styles.formTitle}>New Competition</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Competition name"
-                                value={name}
-                                onChangeText={setName}
-                            />
+                {/* Create button */}
+                <TouchableOpacity style={styles.createButton} onPress={() => setShowForm(!showForm)}>
+                    <Text style={styles.createButtonText}>+ Create Competition</Text>
+                </TouchableOpacity>
 
-                            {Platform.OS === 'web' ? (
-                                React.createElement('input', {
-                                    type: 'date',
-                                    min: formatDate(today),
-                                    value: startDate ? formatDate(startDate) : '',
-                                    onChange: (e: any) => setStartDate(new Date(e.target.value)),
-                                    style: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingLeft: 15, marginBottom: 15, fontSize: 16, border: '1px solid #E2E8F0', width: '100%', boxSizing: 'border-box' }
-                                })
-                            ) : (
-                                <>
-                                    <TouchableOpacity style={styles.datePicker} onPress={() => setShowStartPicker(true)}>
-                                        <Text style={styles.datePickerText}>
-                                            {startDate ? `Start: ${formatDate(startDate)}` : 'Select start date'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <DateTimePickerModal
-                                        isVisible={showStartPicker}
-                                        mode="date"
-                                        minimumDate={today}
-                                        onConfirm={(date) => { setStartDate(date); setShowStartPicker(false); }}
-                                        onCancel={() => setShowStartPicker(false)}
-                                    />
-                                </>
-                            )}
+                {/* Create form */}
+                {showForm && (
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>New Competition</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Competition name"
+                            placeholderTextColor="#A8B8A0"
+                            value={name}
+                            onChangeText={setName}
+                        />
 
-                            {Platform.OS === 'web' ? (
-                                React.createElement('input', {
-                                    type: 'date',
-                                    min: startDate ? formatDate(startDate) : formatDate(today),
-                                    value: endDate ? formatDate(endDate) : '',
-                                    onChange: (e: any) => setEndDate(new Date(e.target.value)),
-                                    style: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingLeft: 15, marginBottom: 15, fontSize: 16, border: '1px solid #E2E8F0', width: '100%', boxSizing: 'border-box' }
-                                })
-                            ) : (
-                                <>
-                                    <TouchableOpacity style={styles.datePicker} onPress={() => setShowEndPicker(true)}>
-                                        <Text style={styles.datePickerText}>
-                                            {endDate ? `End: ${formatDate(endDate)}` : 'Select end date'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <DateTimePickerModal
-                                        isVisible={showEndPicker}
-                                        mode="date"
-                                        minimumDate={startDate || today}
-                                        onConfirm={(date) => { setEndDate(date); setShowEndPicker(false); }}
-                                        onCancel={() => setShowEndPicker(false)}
-                                    />
-                                </>
-                            )}
-
-                            <TouchableOpacity style={styles.submitButton} onPress={handleCreate} disabled={creating}>
-                                {creating ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Create</Text>}
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>My Competitions ({competitions.length})</Text>
-                        {competitions.length === 0 ? (
-                            <Text style={styles.emptyText}>No competitions yet. Create one above!</Text>
+                        {Platform.OS === 'web' ? (
+                            React.createElement('input', {
+                                type: 'date',
+                                min: formatDate(today),
+                                value: startDate ? formatDate(startDate) : '',
+                                onChange: (e: any) => setStartDate(new Date(e.target.value)),
+                                style: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingLeft: 15, marginBottom: 15, fontSize: 16, border: '1px solid #D4E8D4', width: '100%', boxSizing: 'border-box', color: '#2D4A2D' }
+                            })
                         ) : (
-                            competitions.map((c: any) => (
-                                <TouchableOpacity key={c.id} style={styles.competitionRow} onPress={() => handleSelectCompetition(c)}>
-                                    <Text style={styles.competitionName}>{c.name}</Text>
-                                    <Text style={styles.competitionDate}>{c.startDate} → {c.endDate}</Text>
+                            <>
+                                <TouchableOpacity style={styles.datePicker} onPress={() => setShowStartPicker(true)}>
+                                    <Text style={styles.datePickerText}>
+                                        {startDate ? `Start: ${formatDate(startDate)}` : 'Select start date'}
+                                    </Text>
                                 </TouchableOpacity>
-                            ))
+                                <DateTimePickerModal
+                                    isVisible={showStartPicker}
+                                    mode="date"
+                                    minimumDate={today}
+                                    onConfirm={(date) => { setStartDate(date); setShowStartPicker(false); }}
+                                    onCancel={() => setShowStartPicker(false)}
+                                />
+                            </>
                         )}
+
+                        {Platform.OS === 'web' ? (
+                            React.createElement('input', {
+                                type: 'date',
+                                min: startDate ? formatDate(startDate) : formatDate(today),
+                                value: endDate ? formatDate(endDate) : '',
+                                onChange: (e: any) => setEndDate(new Date(e.target.value)),
+                                style: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingLeft: 15, marginBottom: 15, fontSize: 16, border: '1px solid #D4E8D4', width: '100%', boxSizing: 'border-box', color: '#2D4A2D' }
+                            })
+                        ) : (
+                            <>
+                                <TouchableOpacity style={styles.datePicker} onPress={() => setShowEndPicker(true)}>
+                                    <Text style={styles.datePickerText}>
+                                        {endDate ? `End: ${formatDate(endDate)}` : 'Select end date'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <DateTimePickerModal
+                                    isVisible={showEndPicker}
+                                    mode="date"
+                                    minimumDate={startDate || today}
+                                    onConfirm={(date) => { setEndDate(date); setShowEndPicker(false); }}
+                                    onCancel={() => setShowEndPicker(false)}
+                                />
+                            </>
+                        )}
+
+                        <TouchableOpacity style={styles.submitButton} onPress={handleCreate} disabled={creating}>
+                            {creating ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Create</Text>}
+                        </TouchableOpacity>
                     </View>
+                )}
+
+                {/* Competition list */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>My Competitions ({competitions.length})</Text>
+                    {competitions.length === 0 ? (
+                        <Text style={styles.emptyText}>No competitions yet. Create one above! 🌿</Text>
+                    ) : (
+                        competitions.map((c: any) => (
+                            <TouchableOpacity key={c.id} style={styles.competitionRow} onPress={() => handleSelectCompetition(c)}>
+                                <View style={styles.competitionIcon}>
+                                    <Text style={{ fontSize: 20 }}>🏁</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.competitionName}>{c.name}</Text>
+                                    <Text style={styles.dateText}>{c.startDate} → {c.endDate}</Text>
+                                </View>
+                                <Text style={{ color: '#A8B8A0', fontSize: 18 }}>›</Text>
+                            </TouchableOpacity>
+                        ))
+                    )}
                 </View>
-            )}
-        </ScrollView>
+
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F4F8', padding: 20 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    backButton: { marginBottom: 15 },
-    backButtonText: { color: '#2B6CB0', fontSize: 16, fontWeight: '600' },
-    title: { fontSize: 28, fontWeight: 'bold', color: '#1A202C', marginBottom: 20 },
-    createButton: { backgroundColor: '#4CAF50', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+    safeArea: { flex: 1, backgroundColor: '#FAFAF7' },
+    container: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 40 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF7' },
+
+    header: { marginBottom: 20 },
+    backButton: { marginBottom: 8 },
+    backButtonText: { color: '#7CB987', fontSize: 16, fontWeight: '600' },
+    title: { fontSize: 28, fontWeight: 'bold', color: '#2D4A2D' },
+    dateText: { fontSize: 13, color: '#7A9E7A', marginTop: 4, marginBottom: 16 },
+
+    createButton: { backgroundColor: '#7CB987', height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     createButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    form: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#E2E8F0' },
-    formTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A202C', marginBottom: 15 },
-    input: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0', color: '#1A202C' },
-    datePicker: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, borderWidth: 1, borderColor: '#E2E8F0', justifyContent: 'center' },
-    datePickerText: { fontSize: 16, color: '#1A202C' },
-    submitButton: { backgroundColor: '#4CAF50', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+
+    card: { backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#2D4A2D', marginBottom: 14 },
+
+    input: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, fontSize: 16, borderWidth: 1, borderColor: '#D4E8D4', color: '#2D4A2D' },
+    datePicker: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, borderWidth: 1, borderColor: '#D4E8D4', justifyContent: 'center' },
+    datePickerText: { fontSize: 16, color: '#2D4A2D' },
+    submitButton: { backgroundColor: '#7CB987', height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     submitButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    section: { backgroundColor: '#fff', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: '#E2E8F0' },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A202C', marginBottom: 10 },
-    competitionRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-    competitionName: { fontSize: 16, fontWeight: '600', color: '#1A202C' },
-    competitionDate: { fontSize: 14, color: '#718096', marginTop: 4 },
-    emptyText: { color: '#718096', textAlign: 'center', paddingVertical: 20 },
-    userRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-    userName: { fontSize: 16, color: '#1A202C' },
-    status: { fontSize: 14, color: '#718096' },
-    addButton: { backgroundColor: '#4CAF50', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 6 },
-    addButtonText: { color: '#fff', fontWeight: 'bold' },
+
+    competitionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F4F0', gap: 12 },
+    competitionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFE5D9', alignItems: 'center', justifyContent: 'center' },
+    competitionName: { fontSize: 15, fontWeight: '600', color: '#2D4A2D' },
+
+    memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0F4F0' },
+    avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#D4EDDA', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+    avatarText: { color: '#3A7D44', fontWeight: 'bold', fontSize: 15 },
+    memberInfo: { flex: 1 },
+    memberName: { fontSize: 15, color: '#2D4A2D', fontWeight: '500' },
+    memberRole: { fontSize: 12, color: '#7A9E7A' },
+
     tierButtons: { flexDirection: 'row', gap: 5 },
-    tierButton: { width: 35, height: 35, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
-    tierButtonActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
-    tierButtonText: { fontSize: 12, color: '#718096', fontWeight: 'bold' },
+    tierButton: { width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#D4E8D4', alignItems: 'center', justifyContent: 'center' },
+    tierButtonActive: { backgroundColor: '#7CB987', borderColor: '#7CB987' },
+    tierButtonText: { fontSize: 12, color: '#7A9E7A', fontWeight: 'bold' },
     tierButtonTextActive: { color: '#fff' },
+
+    inviteButton: { backgroundColor: '#F4A261', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+    inviteButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+
+    emptyText: { color: '#A8B8A0', textAlign: 'center', paddingVertical: 20, fontSize: 14 },
 });

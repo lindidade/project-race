@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView } from 'react-native';
 import ApiService from '../services/ApiService';
 
-export default function DashboardScreen({ user, onLogout, onNavigateToFriends, onNavigateToLeaderboard, onNavigateToCompetition }: { 
-    user: any, 
+export default function DashboardScreen({ user, onLogout, onNavigateToFriends, onNavigateToLeaderboard, onNavigateToCompetition }: {
+    user: any,
     onLogout: () => void,
     onNavigateToFriends: () => void,
     onNavigateToLeaderboard: () => void,
     onNavigateToCompetition: () => void
 }) {
-
     const [distance, setDistance] = useState('');
     const [stats, setStats] = useState({ totalDistance: 0, activityCount: 0 });
     const [loading, setLoading] = useState(true);
@@ -21,7 +20,7 @@ export default function DashboardScreen({ user, onLogout, onNavigateToFriends, o
             const totalDistance = activities.reduce((sum: number, a: any) => sum + parseFloat(a.distance), 0);
             setStats({ totalDistance, activityCount: activities.length });
         } catch (error) {
-            Alert.alert('Fel', 'Kunde inte hämta aktiviteter.');
+            Alert.alert('Error', 'Could not fetch activities.');
         } finally {
             setLoading(false);
         }
@@ -32,17 +31,17 @@ export default function DashboardScreen({ user, onLogout, onNavigateToFriends, o
     const handleAddActivity = async () => {
         const parsedDistance = parseFloat(distance);
         if (isNaN(parsedDistance) || parsedDistance <= 0) {
-            Alert.alert('Fel', 'Vänligen fyll i en giltig distans i kilometer.');
+            Alert.alert('Error', 'Please enter a valid distance in kilometers.');
             return;
         }
         setSubmitting(true);
         try {
             await ApiService.saveActivity(user.id, parsedDistance);
-            Alert.alert('Snyggt jobbat! 🎉', `Du har registrerat ${parsedDistance} km.`);
+            Alert.alert('Great job! 🎉', `You have logged ${parsedDistance} km.`);
             setDistance('');
             fetchData();
         } catch (error: any) {
-            Alert.alert('Fel', error.message || 'Kunde inte spara aktivitet.');
+            Alert.alert('Error', error.message || 'Could not save activity.');
         } finally {
             setSubmitting(false);
         }
@@ -51,86 +50,103 @@ export default function DashboardScreen({ user, onLogout, onNavigateToFriends, o
     if (loading) {
         return (
             <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#4CAF50" />
+                <ActivityIndicator size="large" color="#7CB987" />
             </View>
         );
     }
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.welcomeText}>Hej, {user.name}! 👋</Text>
-                <TouchableOpacity onPress={onLogout}>
-                    <Text style={styles.logoutText}>Logga ut</Text>
-                </TouchableOpacity>
-            </View>
-            <Text style={styles.subtitle}>Här är dina framsteg</Text>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
 
-            <View style={styles.statsRow}>
-                <View style={[styles.card, { backgroundColor: '#C6F6D5' }]}>
-                    <Text style={styles.cardLabel}>Totalt sprungit</Text>
-                    <Text style={[styles.cardValue, { color: '#276749' }]}>
-                        {stats.totalDistance.toFixed(1)} km
-                    </Text>
+                {/* Header */}
+                <View style={styles.header}>
+                    <View>
+                        <Text style={styles.welcomeText}>Hello, {user.name}! </Text>
+                        <Text style={styles.subtitle}>Here are your progress</Text>
+                    </View>
+                    <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
+                        <Text style={styles.logoutText}>Log out</Text>
+                    </TouchableOpacity>
                 </View>
-                <View style={[styles.card, { backgroundColor: '#BEE3F8' }]}>
-                    <Text style={styles.cardLabel}>Antal rundor</Text>
-                    <Text style={[styles.cardValue, { color: '#2A69AC' }]}>
-                        {stats.activityCount} st
-                    </Text>
+
+                {/* Stats cards */}
+                <View style={styles.statsRow}>
+                    <View style={[styles.statCard, { backgroundColor: '#D4EDDA' }]}>
+                        <Text style={styles.statEmoji}>🏃</Text>
+                        <Text style={styles.statLabel}>Total distance</Text>
+                        <Text style={[styles.statValue, { color: '#3A7D44' }]}>
+                            {stats.totalDistance.toFixed(1)} km
+                        </Text>
+                    </View>
+                    <View style={[styles.statCard, { backgroundColor: '#FFE5D9' }]}>
+                        <Text style={styles.statEmoji}>🔥</Text>
+                        <Text style={styles.statLabel}>Activity count</Text>
+                        <Text style={[styles.statValue, { color: '#C4622D' }]}>
+                            {stats.activityCount} sessions
+                        </Text>
+                    </View>
                 </View>
-            </View>
 
-            <View style={styles.formCard}>
-    <Text style={styles.formTitle}>Log new run 🏃‍♂️</Text>
-    <TextInput
-        style={styles.input}
-        placeholder="Distance in km (e.g. 5.5)"
-        keyboardType="numeric"
-        value={distance}
-        onChangeText={setDistance}
-    />
-    <TouchableOpacity style={styles.button} onPress={handleAddActivity} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save run</Text>}
-    </TouchableOpacity>
-</View>
+                {/* Log run card */}
+                <View style={styles.formCard}>
+                    <Text style={styles.formTitle}>Log a run 🏃‍♀️</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Distance in km (e.g., 5.5)"
+                        placeholderTextColor="#A8B8A0"
+                        keyboardType="numeric"
+                        value={distance}
+                        onChangeText={setDistance}
+                    />
+                    <TouchableOpacity style={styles.saveButton} onPress={handleAddActivity} disabled={submitting}>
+                        {submitting
+                            ? <ActivityIndicator color="#fff" />
+                            : <Text style={styles.saveButtonText}>Save run</Text>
+                        }
+                    </TouchableOpacity>
+                </View>
 
-<TouchableOpacity style={styles.friendsButton} onPress={onNavigateToFriends}>
-    <Text style={styles.friendsButtonText}>👥 My Friends</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.leaderboardButton} onPress={onNavigateToLeaderboard}>
-    <Text style={styles.leaderboardButtonText}>🏆 Leaderboard</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.competitionButton} onPress={onNavigateToCompetition}>
-    <Text style={styles.competitionButtonText}>🏁 Competitions</Text>
-</TouchableOpacity>
+                {/* Motivational text */}
+                <Text style={styles.motivational}>Keep going — every step counts! 🌿</Text>
 
             </ScrollView>
+
+           
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F4F8', padding: 20 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F4F8' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-    welcomeText: { fontSize: 26, fontWeight: 'bold', color: '#1A202C' },
-    logoutText: { color: '#E53E3E', fontWeight: '600' },
-    subtitle: { fontSize: 16, color: '#718096', marginBottom: 25 },
-    statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
-    card: { flex: 1, borderRadius: 12, padding: 20, marginHorizontal: 5 },
-    cardLabel: { fontSize: 14, color: '#1A202C', fontWeight: '500', marginBottom: 5 },
-    cardValue: { fontSize: 24, fontWeight: 'bold' },
-    formCard: { backgroundColor: '#fff', borderRadius: 12, padding: 20, borderWidth: 1, borderColor: '#E2E8F0' },
-    formTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A202C', marginBottom: 15 },
-    input: { height: 50, backgroundColor: '#F0F4F8', borderRadius: 8, paddingHorizontal: 15, marginBottom: 15, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0', color: '#1A202C' },
-    button: { backgroundColor: '#4CAF50', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    friendsButton: { backgroundColor: '#2B6CB0', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 15 },
-    friendsButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    leaderboardButton: { backgroundColor: '#D69E2E', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-    leaderboardButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    competitionButton: { backgroundColor: '#805AD5', height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-    competitionButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    safeArea: { flex: 1, backgroundColor: '#FAFAF7' },
+    container: { flex: 1 },
+    scrollContent: { padding: 20, paddingBottom: 40 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAF7' },
+
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 10, marginBottom: 20 },
+    welcomeText: { fontSize: 24, fontWeight: 'bold', color: '#2D4A2D' },
+    subtitle: { fontSize: 14, color: '#7A9E7A', marginTop: 2 },
+    logoutBtn: { backgroundColor: '#FFE5D9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+    logoutText: { color: '#C4622D', fontWeight: '600', fontSize: 13 },
+
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 12 },
+    statCard: { flex: 1, borderRadius: 20, padding: 18, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+    statEmoji: { fontSize: 28, marginBottom: 6 },
+    statLabel: { fontSize: 12, color: '#5A7A5A', fontWeight: '500', marginBottom: 4 },
+    statValue: { fontSize: 22, fontWeight: 'bold' },
+
+    formCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, marginBottom: 20 },
+    formTitle: { fontSize: 17, fontWeight: 'bold', color: '#2D4A2D', marginBottom: 14 },
+    input: { height: 50, backgroundColor: '#F4F8F4', borderRadius: 12, paddingHorizontal: 15, marginBottom: 14, fontSize: 16, borderWidth: 1, borderColor: '#D4E8D4', color: '#2D4A2D' },
+    saveButton: { backgroundColor: '#7CB987', height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
+    motivational: { textAlign: 'center', color: '#A8B8A0', fontSize: 14, fontStyle: 'italic', marginBottom: 10 },
+
+    bottomNav: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 10, paddingHorizontal: 10, borderTopWidth: 1, borderTopColor: '#EEF2EE', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 5 },
+    navItem: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+    navIcon: { fontSize: 22, marginBottom: 3 },
+    navIconActive: { fontSize: 22, marginBottom: 3 },
+    navLabel: { fontSize: 11, color: '#A8B8A0' },
+    navLabelActive: { color: '#7CB987', fontWeight: '600' },
 });

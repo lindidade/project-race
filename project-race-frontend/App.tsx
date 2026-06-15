@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -7,6 +7,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import FriendsScreen from './src/screens/FriendsScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import CompetitionScreen from './src/screens/CompetitionScreen';
+import BottomNav from './src/components/BottomNav';
 
 type Screen = 'login' | 'register' | 'dashboard' | 'friends' | 'leaderboard' | 'competition';
 
@@ -47,36 +48,57 @@ export default function App() {
 
     if (loading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#4CAF50" />
+            <View style={styles.centered}>
+                <ActivityIndicator size="large" color="#4A6741" />
             </View>
         );
     }
 
+    // No bottom nav for login/register
     if (screen === 'register') {
         return <RegisterScreen onNavigateToLogin={() => setScreen('login')} />;
     }
 
-    if (screen === 'dashboard' && user) {
-    return <DashboardScreen user={user} onLogout={handleLogout} onNavigateToFriends={() => setScreen('friends')} onNavigateToLeaderboard={() => setScreen('leaderboard')} onNavigateToCompetition={() => setScreen('competition')} />;
+    if (screen === 'login' || !user) {
+        return (
+            <LoginScreen
+                onLoginSuccess={handleLoginSuccess}
+                onNavigateToRegister={() => setScreen('register')}
+            />
+        );
     }
 
-    if (screen === 'friends' && user) {
-        return <FriendsScreen user={user} onBack={() => setScreen('dashboard')} />;
-    }
-
-    if (screen === 'leaderboard' && user) {
-    return <LeaderboardScreen user={user} onBack={() => setScreen('dashboard')} />;
-    }
-
-    if (screen === 'competition' && user) {
-    return <CompetitionScreen user={user} onBack={() => setScreen('dashboard')} />;
-    }
+    // All main screens share bottom nav
+    const renderScreen = () => {
+        switch (screen) {
+            case 'dashboard':
+                return <DashboardScreen user={user} onLogout={handleLogout} />;
+            case 'friends':
+                return <FriendsScreen user={user} />;
+            case 'leaderboard':
+                return <LeaderboardScreen user={user} />;
+            case 'competition':
+                return <CompetitionScreen user={user} />;
+            default:
+                return <DashboardScreen user={user} onLogout={handleLogout} />;
+        }
+    };
 
     return (
-        <LoginScreen
-            onLoginSuccess={handleLoginSuccess}
-            onNavigateToRegister={() => setScreen('register')}
-        />
+        <View style={styles.container}>
+            <View style={styles.content}>
+                {renderScreen()}
+            </View>
+            <BottomNav
+                activeScreen={screen as any}
+                onNavigate={(s) => setScreen(s)}
+            />
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#F7F9F2' },
+    content: { flex: 1 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+});
