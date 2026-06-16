@@ -29,7 +29,7 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister }: {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Welcome back 👋</Text>
+            <Text style={styles.title}>Start your journey</Text>
             <Text style={styles.subtitle}>Log in to continue your race</Text>
             <TextInput
                 style={styles.input}

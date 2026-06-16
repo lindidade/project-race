@@ -318,6 +318,42 @@ getTeams: async (competitionId: number) => {
         throw error;
     }
 },
+
+getUserById: async (userId: number) => {
+    try {
+        const token = await AsyncStorage.getItem('userToken');
+        const response = await fetch(`${API_URL}/users/${userId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not load user');
+        return data;
+    } catch (error: any) {
+        console.error('API GetUserById Error:', error.message);
+        throw error;
+    }
+},
+
+updateMemberRole: async (memberId: number, role: string) => {
+    try {
+        const token = await AsyncStorage.getItem('userToken');
+        const response = await fetch(`${API_URL}/competitions/members/${memberId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ role })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not update role');
+        return data;
+    } catch (error: any) {
+        console.error('API UpdateMemberRole Error:', error.message);
+        throw error;
+    }
+},
+
 };
 
 export default ApiService;

@@ -4,7 +4,12 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import ApiService from '../services/ApiService';
 import { Colors } from '../constants/colors';
 
-export default function CompetitionScreen({ user }: { user: any }) {
+export default function CompetitionScreen({ user, onNavigateToProfile, initialCompetition, onCompetitionSelected }: {
+    user: any,
+    onNavigateToProfile: (userId: number, currentUserId: number, competitionId: number) => void,
+    initialCompetition?: any,
+    onCompetitionSelected?: (competition: any) => void
+}) {
     const [competitions, setCompetitions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -71,11 +76,12 @@ export default function CompetitionScreen({ user }: { user: any }) {
     };
 
     const handleSelectCompetition = (competition: any) => {
-        setSelectedCompetition(competition);
-        fetchMembers(competition.id);
-        fetchTeams(competition.id);
-        fetchFriends();
-    };
+    setSelectedCompetition(competition);
+    fetchMembers(competition.id);
+    fetchTeams(competition.id);
+    fetchFriends();
+    if (onCompetitionSelected) onCompetitionSelected(competition);
+};
 
     const handleInvite = async (friendId: number) => {
         try {
@@ -96,7 +102,12 @@ export default function CompetitionScreen({ user }: { user: any }) {
         }
     };
 
-    useEffect(() => { fetchCompetitions(); }, []);
+    useEffect(() => { 
+    fetchCompetitions();
+    if (initialCompetition) {
+        handleSelectCompetition(initialCompetition);
+    }
+}, []);
 
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
@@ -151,10 +162,11 @@ export default function CompetitionScreen({ user }: { user: any }) {
                                 <View style={styles.avatar}>
                                     <Text style={styles.avatarText}>{m.name?.charAt(0).toUpperCase()}</Text>
                                 </View>
-                                <View style={styles.memberInfo}>
+                                <TouchableOpacity style={styles.memberInfo} onPress={() => onNavigateToProfile(m.userId, user.id, selectedCompetition.id)}>
                                     <Text style={styles.memberName}>{m.name}</Text>
                                     <Text style={styles.memberRole}>{m.role}</Text>
-                                </View>
+                                </TouchableOpacity>
+                                
                                 <View style={styles.tierButtons}>
                                     {[1, 2, 3].map((tier) => (
                                         <TouchableOpacity

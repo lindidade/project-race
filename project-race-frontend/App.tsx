@@ -8,12 +8,16 @@ import FriendsScreen from './src/screens/FriendsScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import CompetitionScreen from './src/screens/CompetitionScreen';
 import BottomNav from './src/components/BottomNav';
+import ProfileScreen from './src/screens/ProfileScreen';
 
-type Screen = 'login' | 'register' | 'dashboard' | 'friends' | 'leaderboard' | 'competition';
+type Screen = 'login' | 'register' | 'dashboard' | 'friends' | 'leaderboard' | 'competition' | 'profile';
 
 export default function App() {
     const [screen, setScreen] = useState<Screen>('login');
     const [user, setUser] = useState<any>(null);
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+    const [selectedCompetitionId, setSelectedCompetitionId] = useState<number | null>(null);
+    const [selectedCompetition, setSelectedCompetition] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -78,7 +82,23 @@ export default function App() {
             case 'leaderboard':
                 return <LeaderboardScreen user={user} />;
             case 'competition':
-                return <CompetitionScreen user={user} />;
+                return <CompetitionScreen
+                    user={user}
+                    onNavigateToProfile={(userId, currentUserId, competitionId) => {
+                        setSelectedUserId(userId);
+                        setSelectedCompetitionId(competitionId);
+                        setScreen('profile');
+                    }}
+                    initialCompetition={selectedCompetition}
+                    onCompetitionSelected={(c) => setSelectedCompetition(c)}
+                />;
+            case 'profile':
+                return <ProfileScreen
+                    userId={selectedUserId!}
+                    currentUser={user}
+                    competitionId={selectedCompetitionId!}
+                    onBack={() => setScreen('competition')}
+                />;
             default:
                 return <DashboardScreen user={user} onLogout={handleLogout} />;
         }
@@ -89,10 +109,12 @@ export default function App() {
             <View style={styles.content}>
                 {renderScreen()}
             </View>
-            <BottomNav
-                activeScreen={screen as any}
-                onNavigate={(s) => setScreen(s)}
-            />
+            {screen !== 'profile' && (
+                <BottomNav
+                    activeScreen={screen as any}
+                    onNavigate={(s) => setScreen(s)}
+                />
+            )}
         </View>
     );
 }
