@@ -30,5 +30,26 @@ namespace project_race_backend_csharp.Controllers
 
             return Ok(users);
         }
+
+        // GET: api/users/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserById(int id)
+        {
+            var user = await _context.Users
+                .Where(u => u.Id == id)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Name,
+                    u.Email,
+                    u.Role
+                })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            return Ok(user);
+        }
     }
 }

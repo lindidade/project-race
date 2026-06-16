@@ -158,102 +158,123 @@ namespace project_race_backend_csharp.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+
+        [HttpPut("members/{memberId}/role")]
+        public async Task<IActionResult> UpdateMemberRole([FromBody] UpdateRoleModel model, int memberId)
+        {
+            try
+            {
+                var member = await _context.CompetitionMembers.FindAsync(memberId);
+                if (member == null)
+                    return NotFound(new { message = "Member not found." });
+
+                member.Role = model.Role;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Role updated!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
         // POST api/competitions/{id}/randomize-teams
-[HttpPost("{id}/randomize-teams")]
-public async Task<IActionResult> RandomizeTeams(int id, [FromBody] RandomizeTeamsModel model)
-{
-    if (model.NumberOfTeams < 2 || model.NumberOfTeams > 5)
-        return BadRequest(new { message = "Number of teams must be between 2 and 5." });
-
-    // Fetch all participants with their tiers, sorted best to worst (tier 1 = best)
-    var participants = await _context.CompetitionMembers
-        .Where(cm => cm.CompetitionId == id && cm.Tier != null)
-        .Join(_context.Users,
-            cm => cm.UserId,
-            u => u.Id,
-            (cm, u) => new { cm.UserId, cm.Tier, u.Name })
-        .OrderBy(p => p.Tier)
-        .ToListAsync();
-
-    if (participants.Count == 0)
-        return BadRequest(new { message = "No participants with tiers found." });
-
-    // Snake draft: distribute players across teams for balanced tiers
-    var buckets = new List<List<(int UserId, int Tier, string Name)>>();
-    for (int i = 0; i < model.NumberOfTeams; i++)
-        buckets.Add(new List<(int, int, string)>());
-
-    bool goingRight = true;
-    int teamIndex = 0;
-
-    foreach (var p in participants)
-    {
-        buckets[teamIndex].Add((p.UserId!.Value, p.Tier!.Value, p.Name ?? ""));
-
-        if (goingRight)
+        [HttpPost("{id}/randomize-teams")]
+        public async Task<IActionResult> RandomizeTeams(int id, [FromBody] RandomizeTeamsModel model)
         {
-            if (teamIndex == model.NumberOfTeams - 1) goingRight = false;
-            else teamIndex++;
-        }
-        else
-        {
-            if (teamIndex == 0) goingRight = true;
-            else teamIndex--;
-        }
-    }
+            if (model.NumberOfTeams < 2 || model.NumberOfTeams > 5)
+                return BadRequest(new { message = "Number of teams must be between 2 and 5." });
 
-    // Delete existing teams for this competition
-    var existingTeams = await _context.Teams
-        .Where(t => t.CompetitionId == id)
-        .Include(t => t.TeamMembers)
-        .ToListAsync();
+            // Fetch all participants with their tiers, sorted best to worst (tier 1 = best)
+            var participants = await _context.CompetitionMembers
+                .Where(cm => cm.CompetitionId == id && cm.Tier != null)
+                .Join(_context.Users,
+                    cm => cm.UserId,
+                    u => u.Id,
+                    (cm, u) => new { cm.UserId, cm.Tier, u.Name })
+                .OrderBy(p => p.Tier)
+                .ToListAsync();
 
-    foreach (var team in existingTeams)
-        _context.TeamMembers.RemoveRange(team.TeamMembers);
+            if (participants.Count == 0)
+                return BadRequest(new { message = "No participants with tiers found." });
 
-    _context.Teams.RemoveRange(existingTeams);
-    await _context.SaveChangesAsync();
+            // Snake draft: distribute players across teams for balanced tiers
+            var buckets = new List<List<(int UserId, int Tier, string Name)>>();
+            for (int i = 0; i < model.NumberOfTeams; i++)
+                buckets.Add(new List<(int, int, string)>());
 
-    // Create new teams and members
-    var result = new List<object>();
+            bool goingRight = true;
+            int teamIndex = 0;
 
-    for (int i = 0; i < buckets.Count; i++)
-    {
-        var team = new Team
-        {
-            Name = $"Team {i + 1}",
-            CompetitionId = id
-        };
-        _context.Teams.Add(team);
-        await _context.SaveChangesAsync();
-
-        foreach (var player in buckets[i])
-        {
-            _context.TeamMembers.Add(new TeamMember
+            foreach (var p in participants)
             {
-                TeamId = team.Id,
-                UserId = player.UserId,
-                JoinedAt = DateTime.UtcNow
-            });
-        }
-        await _context.SaveChangesAsync();
+                buckets[teamIndex].Add((p.UserId!.Value, p.Tier!.Value, p.Name ?? ""));
 
-        result.Add(new
-        {
-            teamId = team.Id,
-            teamName = team.Name,
-            members = buckets[i].Select(p => new
+                if (goingRight)
+                {
+                    if (teamIndex == model.NumberOfTeams - 1) goingRight = false;
+                    else teamIndex++;
+                }
+                else
+                {
+                    if (teamIndex == 0) goingRight = true;
+                    else teamIndex--;
+                }
+            }
+
+            // Delete existing teams for this competition
+            var existingTeams = await _context.Teams
+                .Where(t => t.CompetitionId == id)
+                .Include(t => t.TeamMembers)
+                .ToListAsync();
+
+            foreach (var team in existingTeams)
+                _context.TeamMembers.RemoveRange(team.TeamMembers);
+
+            _context.Teams.RemoveRange(existingTeams);
+            await _context.SaveChangesAsync();
+
+            // Create new teams and members
+            var result = new List<object>();
+
+            for (int i = 0; i < buckets.Count; i++)
             {
-                userId = p.UserId,
-                name = p.Name,
-                tier = p.Tier
-            })
-        });
-    }
+                var team = new Team
+                {
+                    Name = $"Team {i + 1}",
+                    CompetitionId = id
+                };
+                _context.Teams.Add(team);
+                await _context.SaveChangesAsync();
 
-    return Ok(result);
-}
-    }
+                foreach (var player in buckets[i])
+                {
+                    _context.TeamMembers.Add(new TeamMember
+                    {
+                        TeamId = team.Id,
+                        UserId = player.UserId,
+                        JoinedAt = DateTime.UtcNow
+                    });
+                }
+                await _context.SaveChangesAsync();
+
+                result.Add(new
+                {
+                    teamId = team.Id,
+                    teamName = team.Name,
+                    members = buckets[i].Select(p => new
+                    {
+                        userId = p.UserId,
+                        name = p.Name,
+                        tier = p.Tier
+                    })
+                });
+            }
+
+            return Ok(result);
+        }
+            }
 
     public class CreateCompetitionModel
     {
@@ -272,6 +293,11 @@ public async Task<IActionResult> RandomizeTeams(int id, [FromBody] RandomizeTeam
     public class UpdateTierModel
     {
         public int Tier { get; set; }
+    }
+
+    public class UpdateRoleModel
+    {
+        public string Role { get; set; } = string.Empty;
     }
 
     public class RandomizeTeamsModel
