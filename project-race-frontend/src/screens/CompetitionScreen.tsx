@@ -218,15 +218,19 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
                                 <View style={styles.memberInfo}>
                                     <Text style={styles.memberName}>{f.friendName}</Text>
                                 </View>
-                                {invitedFriends.includes(f.friendId) ? (
-                                    <View style={styles.pendingBadge}>
-                                        <Text style={styles.pendingText}>Pending</Text>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity style={styles.inviteButton} onPress={() => handleInviteInCreate(f.friendId)}>
-                                        <Text style={styles.inviteButtonText}>Invite</Text>
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    style={invitedFriends.includes(f.friendId) ? styles.pendingBadge : styles.inviteButton}
+                                    onPress={() => {
+                                        if (invitedFriends.includes(f.friendId)) {
+                                            setInvitedFriends(prev => prev.filter(id => id !== f.friendId));
+                                        } else {
+                                            handleInviteInCreate(f.friendId);
+                                        }
+                                    }}>
+                                    <Text style={invitedFriends.includes(f.friendId) ? styles.pendingText : styles.inviteButtonText}>
+                                        {invitedFriends.includes(f.friendId) ? 'Added' : 'Invite'}
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
                         ))}
                     </View>
