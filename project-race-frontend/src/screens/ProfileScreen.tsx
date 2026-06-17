@@ -17,17 +17,25 @@ export default function ProfileScreen({ userId, currentUser, competitionId, onBa
 
     const fetchData = async () => {
         try {
-            const [activitiesData, competitionsData, profileData, membersData] = await Promise.all([
+            const promises: any[] = [
                 ApiService.getUserActivities(userId),
                 ApiService.getUserCompetitions(userId),
                 ApiService.getUserById(userId),
-                ApiService.getCompetitionMembers(competitionId),
-            ]);
-            setActivities(activitiesData);
-            setCompetitions(competitionsData);
-            setProfile(profileData);
-            const currentMember = membersData.find((m: any) => m.userId === currentUser.id);
-            setIsMainAdmin(currentMember?.role === 'super_admin');
+            ];
+
+            if (competitionId) {
+                promises.push(ApiService.getCompetitionMembers(competitionId));
+            }
+
+            const results = await Promise.all(promises);
+            setActivities(results[0]);
+            setCompetitions(results[1]);
+            setProfile(results[2]);
+
+            if (competitionId && results[3]) {
+                const currentMember = results[3].find((m: any) => m.userId === currentUser.id);
+                setIsMainAdmin(currentMember?.role === 'super_admin');
+            }
         } catch (error) {
             Alert.alert('Error', 'Could not load profile.');
         } finally {
@@ -83,8 +91,7 @@ export default function ProfileScreen({ userId, currentUser, competitionId, onBa
                             {profile?.name?.charAt(0).toUpperCase() ?? userId.toString()}
                         </Text>
                     </View>
-                    <Text style={styles.profileName}>{profile?.name ?? 'User ' + userId}</Text>
-                    <Text style={styles.profileRole}>{profile?.role ?? 'Participant'}</Text>
+                    <Text style={styles.profileName}>{profile?.name ?? 'User ' + userId}</Text>                  
                 </View>
 
                 {/* Stats */}

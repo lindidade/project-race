@@ -78,7 +78,7 @@ export default function App() {
             case 'dashboard':
                 return <DashboardScreen user={user} onLogout={handleLogout} />;
             case 'friends':
-                return <FriendsScreen user={user} />;
+                return <FriendsScreen user={user} onNavigateToProfile={(userId) => { setSelectedUserId(userId); setSelectedCompetitionId(null); setScreen('profile'); }} />;
             case 'leaderboard':
                 return <LeaderboardScreen user={user} />;
             case 'competition':

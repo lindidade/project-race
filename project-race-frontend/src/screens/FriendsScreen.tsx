@@ -3,7 +3,10 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator,
 import ApiService from '../services/ApiService';
 import { Colors } from '../constants/colors';
 
-export default function FriendsScreen({ user }: { user: any}) {
+export default function FriendsScreen({ user, onNavigateToProfile }: {
+    user: any,
+    onNavigateToProfile: (userId: number) => void
+}) {
     const [friends, setFriends] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [search, setSearch] = useState('');
@@ -77,7 +80,7 @@ export default function FriendsScreen({ user }: { user: any}) {
             <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
 
                 {/* Header */}
-                <View style={styles.header}>                    
+                <View style={styles.header}>
                     <Text style={styles.title}>Friends</Text>
                 </View>
 
@@ -142,9 +145,9 @@ export default function FriendsScreen({ user }: { user: any}) {
                                     <Text style={styles.avatarText}>{f.friendName?.charAt(0).toUpperCase()}</Text>
                                 </View>
                                 <Text style={styles.userName}>{f.friendName}</Text>
-                                <View style={styles.statusBadge}>
-                                    <Text style={styles.statusText}>{f.status}</Text>
-                                </View>
+                                <TouchableOpacity style={styles.viewProfileButton} onPress={() => onNavigateToProfile(f.friendId)}>
+                                    <Text style={styles.viewProfileText}>View Profile</Text>
+                                </TouchableOpacity>
                             </View>
                         ))
                     )}
@@ -187,6 +190,9 @@ const styles = StyleSheet.create({
 
     statusBadge: { backgroundColor: Colors.background, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
     statusText: { color: Colors.textMedium, fontSize: 12, fontWeight: '500' },
+
+    viewProfileButton: { backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+    viewProfileText: { color: Colors.primary, fontSize: 12, fontWeight: '600' },
 
     emptyText: { color: Colors.textLight, textAlign: 'center', paddingVertical: 20, fontSize: 14 },
 });
