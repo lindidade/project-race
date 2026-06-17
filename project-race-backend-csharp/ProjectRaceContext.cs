@@ -97,18 +97,19 @@ public class ProjectRaceContext : DbContext
             entity.Property(c => c.CreatedAt).HasColumnName("created_at");
             entity.Ignore(c => c.CreatedByNavigation);
             entity.Ignore(c => c.CompetitionMembers);
+            entity.Property(c => c.Status).HasColumnName("status");
         });
 
 
         modelBuilder.Entity<TeamMember>(entity =>
-{
-    entity.ToTable("team_members");
-    entity.HasKey(tm => tm.Id);
-    entity.Property(tm => tm.Id).HasColumnName("id");
-    entity.Property(tm => tm.UserId).HasColumnName("user_id");
-    entity.Property(tm => tm.TeamId).HasColumnName("team_id");
-    entity.Property(tm => tm.JoinedAt).HasColumnName("joined_at");
-});
+        {
+            entity.ToTable("team_members");
+            entity.HasKey(tm => tm.Id);
+            entity.Property(tm => tm.Id).HasColumnName("id");
+            entity.Property(tm => tm.UserId).HasColumnName("user_id");
+            entity.Property(tm => tm.TeamId).HasColumnName("team_id");
+            entity.Property(tm => tm.JoinedAt).HasColumnName("joined_at");
+        });
 
         modelBuilder.Entity<Team>(entity =>
         {

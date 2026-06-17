@@ -159,6 +159,46 @@ namespace project_race_backend_csharp.Controllers
             }
         }
 
+        [HttpPut("{id}/start")]
+        public async Task<IActionResult> StartCompetition(int id)
+        {
+            try
+            {
+                var competition = await _context.Competitions.FindAsync(id);
+                if (competition == null)
+                    return NotFound(new { message = "Competition not found." });
+
+                competition.Status = "active";
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Competition started!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}/end")]
+        public async Task<IActionResult> EndCompetition(int id)
+        {
+            try
+            {
+                var competition = await _context.Competitions.FindAsync(id);
+                if (competition == null)
+                    return NotFound(new { message = "Competition not found." });
+
+                competition.Status = "completed";
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Competition completed!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
         [HttpPut("members/{memberId}/role")]
         public async Task<IActionResult> UpdateMemberRole([FromBody] UpdateRoleModel model, int memberId)
         {

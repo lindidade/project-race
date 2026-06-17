@@ -11,6 +11,7 @@ public partial class Competition
     public DateOnly? EndDate { get; set; }
     public int? CreatedBy { get; set; }
     public DateTime? CreatedAt { get; set; }
+    public string Status { get; set; } = "draft";
     public virtual User? CreatedByNavigation { get; set; }
     public virtual ICollection<CompetitionMember> CompetitionMembers { get; set; } = new List<CompetitionMember>();
 }
