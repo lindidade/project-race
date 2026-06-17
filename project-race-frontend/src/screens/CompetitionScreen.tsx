@@ -24,7 +24,7 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
     const [numberOfTeams, setNumberOfTeams] = useState(2);
     const [friends, setFriends] = useState<any[]>([]);
     const [invitedFriends, setInvitedFriends] = useState<number[]>([]);
-    const [view, setView] = useState<'list' | 'create' | 'waiting' | 'teams'>('list');
+    const [view, setView] = useState<'list' | 'create' | 'waiting' | 'teams' | 'active'>('list');
 
     const today = new Date();
 
@@ -133,8 +133,11 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
             setStartDate(null);
             setEndDate(null);
             setInvitedFriends([]);
+            setSelectedCompetition({ id: result.competitionId, name, startDate: formatDate(startDate!), endDate: formatDate(endDate!) });
+            fetchMembers(result.competitionId);
+            fetchTeams(result.competitionId);
             fetchCompetitions();
-            setView('list');
+            setView('waiting');
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Could not create competition.');
         } finally {
@@ -360,6 +363,57 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
                     <TouchableOpacity style={[styles.submitButton, { marginTop: 20 }]} onPress={async () => { await handleRandomizeTeams(); }}>
                         <Text style={styles.submitButtonText}>Randomize Again</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.submitButton, { marginTop: 12, backgroundColor: Colors.warning }]}
+                        onPress={async () => {
+                            try {
+                                await ApiService.startCompetition(selectedCompetition.id);
+                                Alert.alert('Competition started!', 'Good luck to all teams!');
+                                setView('active');
+                            } catch (error: any) {
+                                Alert.alert('Error', error.message);
+                            }
+                        }}>
+                        <Text style={styles.submitButtonText}>Start Competition</Text>
+                    </TouchableOpacity>
+                </ScrollView>
+            </SafeAreaView>
+        );
+    }
+    // ACTIVE VIEW
+    if (view === 'active') {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+
+                    <Text style={styles.title}>{selectedCompetition?.name}</Text>
+                    <View style={styles.activeBadge}>
+                        <Text style={styles.activeBadgeText}>Active</Text>
+                    </View>
+                    <Text style={styles.dateText}>{selectedCompetition?.startDate} → {selectedCompetition?.endDate}</Text>
+
+                    {teams.map((team: any, index: number) => (
+                        <View key={team.teamId} style={[styles.card, { marginBottom: 16 }]}>
+                            <Text style={styles.teamCardTitle}>{team.teamName}</Text>
+                            {team.members.map((m: any) => (
+                                <View key={m.userId} style={styles.memberRow}>
+                                    <View style={styles.avatar}>
+                                        <Text style={styles.avatarText}>{m.name?.charAt(0).toUpperCase()}</Text>
+                                    </View>
+                                    <View style={styles.memberInfo}>
+                                        <Text style={styles.memberName}>{m.name}</Text>
+                                    </View>
+                                    <Text style={styles.memberKm}>0.0 km</Text>
+                                </View>
+                            ))}
+                            <View style={styles.teamTotalRow}>
+                                <Text style={styles.teamTotalText}>Team total: 0.0 km</Text>
+                            </View>
+                        </View>
+                    ))}
+
+
                 </ScrollView>
             </SafeAreaView>
         );
@@ -374,7 +428,7 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
                 </View>
 
                 <TouchableOpacity style={styles.createButton} onPress={() => { fetchFriends(); setView('create'); }}>
-                    <Text style={styles.createButtonText}>+ Create Competition</Text>
+                    <Text style={styles.createButtonText}>+ New Competition</Text>
                 </TouchableOpacity>
 
                 <View style={styles.card}>
@@ -450,4 +504,9 @@ const styles = StyleSheet.create({
     teamMemberName: { fontSize: 11, color: Colors.textDark, fontWeight: '500', textAlign: 'center' },
     teamTierBadge: { backgroundColor: Colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 2 },
     teamTierText: { color: Colors.white, fontSize: 10, fontWeight: 'bold' },
+    activeBadge: { backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 8 },
+    activeBadgeText: { color: Colors.primary, fontWeight: '600', fontSize: 13 },
+    memberKm: { fontSize: 14, fontWeight: 'bold', color: Colors.primary, marginLeft: 'auto' },
+    teamTotalRow: { borderTopWidth: 1, borderTopColor: Colors.cardBorder, marginTop: 8, paddingTop: 8 },
+    teamTotalText: { fontSize: 14, fontWeight: 'bold', color: Colors.textDark, textAlign: 'right' },
 });

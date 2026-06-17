@@ -19,6 +19,7 @@ export default function App() {
     const [selectedCompetitionId, setSelectedCompetitionId] = useState<number | null>(null);
     const [selectedCompetition, setSelectedCompetition] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [competitionKey, setCompetitionKey] = useState(0);
 
     useEffect(() => {
         const checkLogin = async () => {
@@ -83,13 +84,14 @@ export default function App() {
                 return <LeaderboardScreen user={user} />;
             case 'competition':
                 return <CompetitionScreen
+                key={competitionKey}
                     user={user}
                     onNavigateToProfile={(userId, currentUserId, competitionId) => {
                         setSelectedUserId(userId);
                         setSelectedCompetitionId(competitionId);
                         setScreen('profile');
                     }}
-                    initialCompetition={selectedCompetition}
+                    initialCompetition={null}
                     onCompetitionSelected={(c) => setSelectedCompetition(c)}
                 />;
             case 'profile':
@@ -112,7 +114,10 @@ export default function App() {
             {screen !== 'profile' && (
                 <BottomNav
                     activeScreen={screen as any}
-                    onNavigate={(s) => setScreen(s)}
+                    onNavigate={(s) => {
+                        if (s === 'competition') setCompetitionKey(k => k + 1);
+                        setScreen(s);
+                    }}
                 />
             )}
         </View>

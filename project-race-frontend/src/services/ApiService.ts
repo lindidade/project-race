@@ -100,7 +100,7 @@ const ApiService = {
             throw error;
         }
     },
-getFriends: async (userId: number) => {
+    getFriends: async (userId: number) => {
         try {
             const token = await AsyncStorage.getItem('userToken');
             const response = await fetch(`${API_URL}/friends/user/${userId}`, {
@@ -149,7 +149,7 @@ getFriends: async (userId: number) => {
             throw error;
         }
     },
-getPendingRequests: async (userId: number) => {
+    getPendingRequests: async (userId: number) => {
         try {
             const token = await AsyncStorage.getItem('userToken');
             const response = await fetch(`${API_URL}/friends/pending/${userId}`, {
@@ -285,74 +285,106 @@ getPendingRequests: async (userId: number) => {
     },
 
     randomizeTeams: async (competitionId: number, numberOfTeams: number) => {
-    try {
-        const token = await AsyncStorage.getItem('userToken');
-        const response = await fetch(`${API_URL}/competitions/${competitionId}/randomize-teams`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ numberOfTeams })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not randomize teams');
-        return data;
-    } catch (error: any) {
-        console.error('API RandomizeTeams Error:', error.message);
-        throw error;
-    }
-},
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/competitions/${competitionId}/randomize-teams`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ numberOfTeams })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not randomize teams');
+            return data;
+        } catch (error: any) {
+            console.error('API RandomizeTeams Error:', error.message);
+            throw error;
+        }
+    },
 
-getTeams: async (competitionId: number) => {
-    try {
-        const token = await AsyncStorage.getItem('userToken');
-        const response = await fetch(`${API_URL}/competitions/${competitionId}/teams`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not load teams');
-        return data;
-    } catch (error: any) {
-        console.error('API GetTeams Error:', error.message);
-        throw error;
-    }
-},
+    getTeams: async (competitionId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/competitions/${competitionId}/teams`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not load teams');
+            return data;
+        } catch (error: any) {
+            console.error('API GetTeams Error:', error.message);
+            throw error;
+        }
+    },
 
-getUserById: async (userId: number) => {
-    try {
-        const token = await AsyncStorage.getItem('userToken');
-        const response = await fetch(`${API_URL}/users/${userId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not load user');
-        return data;
-    } catch (error: any) {
-        console.error('API GetUserById Error:', error.message);
-        throw error;
-    }
-},
+    getUserById: async (userId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/users/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not load user');
+            return data;
+        } catch (error: any) {
+            console.error('API GetUserById Error:', error.message);
+            throw error;
+        }
+    },
 
-updateMemberRole: async (memberId: number, role: string) => {
-    try {
-        const token = await AsyncStorage.getItem('userToken');
-        const response = await fetch(`${API_URL}/competitions/members/${memberId}/role`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ role })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not update role');
-        return data;
-    } catch (error: any) {
-        console.error('API UpdateMemberRole Error:', error.message);
-        throw error;
-    }
-},
+    updateMemberRole: async (memberId: number, role: string) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/competitions/members/${memberId}/role`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ role })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not update role');
+            return data;
+        } catch (error: any) {
+            console.error('API UpdateMemberRole Error:', error.message);
+            throw error;
+        }
+    },
+
+    startCompetition: async (competitionId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/competitions/${competitionId}/start`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not start competition');
+            return data;
+        } catch (error: any) {
+            console.error('API StartCompetition Error:', error.message);
+            throw error;
+        }
+    },
+
+    endCompetition: async (competitionId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/competitions/${competitionId}/end`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not end competition');
+            return data;
+        } catch (error: any) {
+            console.error('API EndCompetition Error:', error.message);
+            throw error;
+        }
+    },
 
 };
 
