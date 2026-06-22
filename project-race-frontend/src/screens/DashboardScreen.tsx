@@ -17,6 +17,13 @@ export default function DashboardScreen({ user, onLogout }: {
     const [submitting, setSubmitting] = useState(false);
     const [coachMessage, setCoachMessage] = useState('');
     const [coachLoading, setCoachLoading] = useState(false);
+    const [isTracking, setIsTracking] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+    const [workoutDistance, setWorkoutDistance] = useState(0);
+    const [workoutSeconds, setWorkoutSeconds] = useState(0);
+    const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number, longitude: number }[]>([]);
+    const locationSubscription = React.useRef<any>(null);
+    const timerRef = React.useRef<any>(null);
 
     const fetchData = async () => {
         try {
@@ -41,7 +48,20 @@ export default function DashboardScreen({ user, onLogout }: {
         })();
     }, []);
 
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371; // Earth radius in km
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
     const handleGetMotivation = async () => {
+
+
         setCoachLoading(true);
         setCoachMessage('');
         try {
@@ -70,7 +90,99 @@ export default function DashboardScreen({ user, onLogout }: {
             setCoachLoading(false);
         }
     };
+    const startWorkout = async () => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission denied', 'Location access is required for tracking.');
+            return;
+        }
+        setWorkoutDistance(0);
+        setWorkoutSeconds(0);
+        setRouteCoordinates([]);
+        setIsTracking(true);
 
+        timerRef.current = setInterval(() => {
+            setWorkoutSeconds(prev => prev + 1);
+        }, 1000);
+
+        locationSubscription.current = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 10, timeInterval: 3000 },
+            (newLocation) => {
+                const { latitude, longitude } = newLocation.coords;
+                setRouteCoordinates(prev => {
+                    if (prev.length > 0) {
+                        const last = prev[prev.length - 1];
+                        const added = calculateDistance(last.latitude, last.longitude, latitude, longitude);
+                        setWorkoutDistance(d => d + added);
+                    }
+                    return [...prev, { latitude, longitude }];
+                });
+            }
+        );
+    };
+    const pauseWorkout = () => {
+        setIsPaused(true);
+        if (locationSubscription.current) {
+            locationSubscription.current.remove();
+            locationSubscription.current = null;
+        }
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const resumeWorkout = async () => {
+        setIsPaused(false);
+        timerRef.current = setInterval(() => {
+            setWorkoutSeconds(prev => prev + 1);
+        }, 1000);
+        locationSubscription.current = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 10, timeInterval: 3000 },
+            (newLocation) => {
+                const { latitude, longitude } = newLocation.coords;
+                setRouteCoordinates(prev => {
+                    if (prev.length > 0) {
+                        const last = prev[prev.length - 1];
+                        const added = calculateDistance(last.latitude, last.longitude, latitude, longitude);
+                        setWorkoutDistance(d => d + added);
+                    }
+                    return [...prev, { latitude, longitude }];
+                });
+            }
+        );
+    };
+    const stopWorkout = async () => {
+        setIsTracking(false);
+        if (locationSubscription.current) {
+            locationSubscription.current.remove();
+            locationSubscription.current = null;
+        }
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+        if (workoutDistance > 0) {
+            try {
+                await ApiService.saveActivity(user.id, parseFloat(workoutDistance.toFixed(2)));
+                Alert.alert('Workout saved!', `You walked ${workoutDistance.toFixed(2)} km.`);
+                fetchData();
+            } catch (error: any) {
+                Alert.alert('Error', error.message || 'Could not save workout.');
+            }
+        } else {
+            Alert.alert('No distance recorded', 'Try walking a bit further next time!');
+        }
+        setWorkoutDistance(0);
+        setWorkoutSeconds(0);
+        setRouteCoordinates([]);
+    };
+
+    const formatTime = (seconds: number): string => {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    };
     const handleAddActivity = async () => {
         const parsedDistance = parseFloat(distance);
         if (isNaN(parsedDistance) || parsedDistance <= 0) {
@@ -135,39 +247,93 @@ export default function DashboardScreen({ user, onLogout }: {
                 <View style={styles.mapCard}>
                     <Text style={styles.formTitle}>Your area 🗺️</Text>
                     {Platform.OS === 'web' ? (
-                        React.createElement('iframe', {
-                            src: `https://www.openstreetmap.org/export/embed.html?bbox=${(location?.longitude ?? 13.0038) - 0.01}%2C${(location?.latitude ?? 55.6050) - 0.01}%2C${(location?.longitude ?? 13.0038) + 0.01}%2C${(location?.latitude ?? 55.6050) + 0.01}&layer=mapnik&marker=${location?.latitude ?? 55.6050}%2C${location?.longitude ?? 13.0038}&zoom_controls=false`,
-                            width: '100%',
-                            height: '200',
-                            style: { border: 'none', borderRadius: 12 },
-                            loading: 'lazy',
-                        })
+                        <iframe
+                            srcDoc={`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                    <style>html,body,#map{height:100%;margin:0;padding:0;}</style>
+                </head>
+                <body>
+                <div id="map"></div>
+                <script>
+                    var lat = ${location?.latitude ?? 55.6050};
+                    var lng = ${location?.longitude ?? 13.0038};
+                    var map = L.map('map').setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    L.marker([lat, lng]).addTo(map);
+                    var coords = ${JSON.stringify(routeCoordinates)};
+                    if (coords.length > 1) {
+                        var latlngs = coords.map(function(c) { return [c.latitude, c.longitude]; });
+                        L.polyline(latlngs, {color: '#4A90D9', weight: 4}).addTo(map);
+                        map.fitBounds(latlngs);
+                    }
+                </script>
+                </body>
+                </html>
+            `}
+                            width="100%"
+                            height="200"
+                            style={{ border: 'none', borderRadius: 12 }}
+                        />
                     ) : (
                         <WebView
                             style={styles.map}
-                            source={{ uri: `https://www.openstreetmap.org/export/embed.html?bbox=${(location?.longitude ?? 13.0038) - 0.01}%2C${(location?.latitude ?? 55.6050) - 0.01}%2C${(location?.longitude ?? 13.0038) + 0.01}%2C${(location?.latitude ?? 55.6050) + 0.01}&layer=mapnik&marker=${location?.latitude ?? 55.6050}%2C${location?.longitude ?? 13.0038}` }}
+                            source={{
+                                html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                    <style>html,body,#map{height:100%;margin:0;padding:0;}</style>
+                </head>
+                <body>
+                <div id="map"></div>
+                <script>
+                    var lat = ${location?.latitude ?? 55.6050};
+                    var lng = ${location?.longitude ?? 13.0038};
+                    var map = L.map('map').setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    L.marker([lat, lng]).addTo(map);
+                    var coords = ${JSON.stringify(routeCoordinates)};
+                    if (coords.length > 1) {
+                        var latlngs = coords.map(function(c) { return [c.latitude, c.longitude]; });
+                        L.polyline(latlngs, {color: '#4A90D9', weight: 4}).addTo(map);
+                        map.fitBounds(latlngs);
+                    }
+                </script>
+                </body>
+                </html>
+            `}}
                         />
                     )}
                 </View>
 
-                {/* Log run card */}
-
+                {/* Workout tracking card */}
                 <View style={styles.formCard}>
-                    <Text style={styles.formTitle}>Log a run 🏃‍♀️</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Distance in km (e.g., 5.5)"
-                        placeholderTextColor="#A8B8A0"
-                        keyboardType="numeric"
-                        value={distance}
-                        onChangeText={setDistance}
-                    />
-                    <TouchableOpacity style={styles.saveButton} onPress={handleAddActivity} disabled={submitting}>
-                        {submitting
-                            ? <ActivityIndicator color="#fff" />
-                            : <Text style={styles.saveButtonText}>Save run</Text>
-                        }
-                    </TouchableOpacity>
+                    <Text style={styles.formTitle}>Track a workout</Text>
+                    {isTracking ? (
+                        <>
+                            <Text style={styles.workoutTimer}>{formatTime(workoutSeconds)}</Text>
+                            <Text style={styles.workoutDistance}>{workoutDistance.toFixed(2)} km</Text>
+                            <TouchableOpacity
+                                style={styles.pauseButton}
+                                onPress={isPaused ? resumeWorkout : pauseWorkout}
+                            >
+                                <Text style={styles.saveButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.stopButton, { marginTop: 10 }]} onPress={stopWorkout}>
+                                <Text style={styles.saveButtonText}>Stop & Save</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <TouchableOpacity style={styles.saveButton} onPress={startWorkout}>
+                            <Text style={styles.saveButtonText}>Start Workout</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* AI Progress Analysis */}
@@ -230,6 +396,10 @@ const styles = StyleSheet.create({
     saveButton: { backgroundColor: Colors.primary, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     saveButtonText: { color: Colors.white, fontSize: 16, fontWeight: 'bold' },
 
+    workoutTimer: { fontSize: 48, fontWeight: 'bold', color: Colors.textDark, textAlign: 'center', marginBottom: 8 },
+    workoutDistance: { fontSize: 28, color: Colors.primary, textAlign: 'center', fontWeight: '600', marginBottom: 16 },
+    pauseButton: { backgroundColor: '#F9A825', height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    stopButton: { backgroundColor: '#E53935', height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     coachCard: { backgroundColor: Colors.white, borderRadius: 20, padding: 20, marginBottom: 20 },
     coachSubtitle: { fontSize: 12, color: Colors.textMedium, marginTop: -10, marginBottom: 16 },
     coachButtonWrapper: { borderRadius: 12, overflow: 'hidden', marginBottom: 14 },
