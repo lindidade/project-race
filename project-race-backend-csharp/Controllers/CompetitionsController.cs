@@ -52,15 +52,16 @@ namespace project_race_backend_csharp.Controllers
                 .Join(_context.Competitions,
                     cm => cm.CompetitionId,
                     c => c.Id,
-                    (cm, c) => new
-                    {
-                        c.Id,
-                        c.Name,
-                        c.StartDate,
-                        c.EndDate,
-                        c.CreatedBy,
-                        cm.JoinedAt
-                    })
+                  (cm, c) => new
+                  {
+                      c.Id,
+                      c.Name,
+                      c.StartDate,
+                      c.EndDate,
+                      c.CreatedBy,
+                      c.Status,
+                      cm.JoinedAt
+                  })
                 .ToListAsync();
 
             return Ok(competitions);
@@ -219,6 +220,39 @@ namespace project_race_backend_csharp.Controllers
             }
         }
 
+        [HttpGet("{id}/teams")]
+        public async Task<IActionResult> GetTeams(int id)
+        {
+            var competition = await _context.Competitions.FindAsync(id);
+            if (competition == null)
+                return NotFound(new { message = "Competition not found." });
+
+            var teams = await _context.Teams
+                .Where(t => t.CompetitionId == id)
+                .Include(t => t.TeamMembers)
+                .ThenInclude(tm => tm.User)
+                .Select(t => new
+                {
+                    teamId = t.Id,
+                    teamName = t.Name,
+                    members = t.TeamMembers.Select(tm => new
+                    {
+                        userId = tm.UserId,
+                        name = tm.User!.Name,
+                        tier = _context.CompetitionMembers
+                            .Where(cm => cm.CompetitionId == id && cm.UserId == tm.UserId)
+                            .Select(cm => cm.Tier)
+                            .FirstOrDefault(),
+                        totalKm = _context.Activities
+                            .Where(a => a.UserId == tm.UserId)
+                            .Sum(a => (double?)a.Distance) ?? 0
+                    })
+                })
+                .ToListAsync();
+
+            return Ok(teams);
+        }
+
         // POST api/competitions/{id}/randomize-teams
         [HttpPost("{id}/randomize-teams")]
         public async Task<IActionResult> RandomizeTeams(int id, [FromBody] RandomizeTeamsModel model)
@@ -314,7 +348,7 @@ namespace project_race_backend_csharp.Controllers
 
             return Ok(result);
         }
-            }
+    }
 
     public class CreateCompetitionModel
     {

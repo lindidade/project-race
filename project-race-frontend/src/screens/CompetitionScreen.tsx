@@ -75,13 +75,20 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
         }
     };
 
-    const handleSelectCompetition = (competition: any) => {
+    const handleSelectCompetition = async (competition: any) => {
+        console.log('Competition status:', competition.status);
         setSelectedCompetition(competition);
         fetchMembers(competition.id);
         fetchTeams(competition.id);
         fetchFriends();
         if (onCompetitionSelected) onCompetitionSelected(competition);
-        setView('waiting');
+
+        await fetchTeams(competition.id);
+        if (competition.status === 'active' || competition.status === 'completed') {
+            setView('active');
+        } else {
+            setView('waiting');
+        }
     };
 
     const handleInviteInCreate = (friendId: number) => {
@@ -404,11 +411,13 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
                                     <View style={styles.memberInfo}>
                                         <Text style={styles.memberName}>{m.name}</Text>
                                     </View>
-                                    <Text style={styles.memberKm}>0.0 km</Text>
+                                    <Text style={styles.memberKm}>{(m.totalKm ?? 0).toFixed(1)} km</Text>
                                 </View>
                             ))}
                             <View style={styles.teamTotalRow}>
-                                <Text style={styles.teamTotalText}>Team total: 0.0 km</Text>
+                                <Text style={styles.teamTotalText}>
+                                    Team total: {team.members.reduce((sum: number, m: any) => sum + (m.totalKm ?? 0), 0).toFixed(1)} km
+                                </Text>
                             </View>
                         </View>
                     ))}
