@@ -180,10 +180,10 @@ const ApiService = {
         }
     },
 
-    getLeaderboard: async () => {
+    getLeaderboard: async (userId: number) => {
         try {
             const token = await AsyncStorage.getItem('userToken');
-            const response = await fetch(`${API_URL}/leaderboard`, {
+            const response = await fetch(`${API_URL}/leaderboard?userId=${userId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -369,7 +369,22 @@ const ApiService = {
             throw error;
         }
     },
-
+    deleteCompetition: async (competitionId: number, userId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(`${API_URL}/competitions/${competitionId}?userId=${userId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not delete competition');
+            return data;
+        } catch (error: any) {
+            console.error('API DeleteCompetition Error:', error.message);
+            throw error;
+        }
+    },
+    
     endCompetition: async (competitionId: number) => {
         try {
             const token = await AsyncStorage.getItem('userToken');

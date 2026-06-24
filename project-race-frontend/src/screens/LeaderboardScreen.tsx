@@ -9,7 +9,7 @@ export default function LeaderboardScreen({ user }: { user: any }) {
 
     const fetchLeaderboard = async () => {
         try {
-            const data = await ApiService.getLeaderboard();
+            const data = await ApiService.getLeaderboard(user.id);
             setLeaderboard(data);
         } catch (error) {
             Alert.alert('Error', 'Could not load leaderboard.');

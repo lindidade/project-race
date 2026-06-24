@@ -16,18 +16,28 @@ namespace project_race_backend_csharp.Controllers
 
         // GET: api/leaderboard - Get top users by total distance
         [HttpGet]
-        public async Task<IActionResult> GetLeaderboard()
+        public async Task<IActionResult> GetLeaderboard([FromQuery] int userId)
         {
-            var leaderboard = await _context.Activities
-                .GroupBy(a => a.UserId)
-                .Select(g => new
-                {
-                    UserId = g.Key,
-                    TotalDistance = g.Sum(a => a.Distance)
-                })
-                .OrderByDescending(x => x.TotalDistance)
-                .Take(10)
+            // Get friend IDs for the current user
+            var friendIds = await _context.Friends
+                .Where(f => (f.UserId1 == userId || f.UserId2 == userId) && f.Status == "accepted")
+                .Select(f => f.UserId1 == userId ? f.UserId2 : f.UserId1)
                 .ToListAsync();
+
+            // Include the user themselves
+            friendIds.Add(userId);
+
+            var leaderboard = await _context.Activities
+                .Where(a => friendIds.Contains(a.UserId))
+                .GroupBy(a => a.UserId)
+                            .Select(g => new
+                            {
+                                UserId = g.Key,
+                                TotalDistance = g.Sum(a => a.Distance)
+                            })
+                            .OrderByDescending(x => x.TotalDistance)
+                            .Take(10)
+                            .ToListAsync();
 
             // Get user names
             var userIds = leaderboard.Select(x => x.UserId).ToList();

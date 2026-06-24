@@ -180,6 +180,25 @@ namespace project_race_backend_csharp.Controllers
             }
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCompetition(int id, [FromQuery] int userId)
+        {
+            var member = await _context.CompetitionMembers
+                .FirstOrDefaultAsync(cm => cm.CompetitionId == id && cm.UserId == userId && cm.Role == "super_admin");
+
+            if (member == null)
+                return Unauthorized(new { message = "Only super admin can delete this competition." });
+
+            var competition = await _context.Competitions.FindAsync(id);
+            if (competition == null)
+                return NotFound(new { message = "Competition not found." });
+
+            _context.Competitions.Remove(competition);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Competition deleted!" });
+        }
+
         [HttpPut("{id}/end")]
         public async Task<IActionResult> EndCompetition(int id)
         {

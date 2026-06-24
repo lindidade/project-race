@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator,
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import ApiService from '../services/ApiService';
 import { Colors } from '../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function CompetitionScreen({ user, onNavigateToProfile, initialCompetition, onCompetitionSelected }: {
     user: any,
@@ -78,8 +79,8 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
     const handleSelectCompetition = async (competition: any) => {
         console.log('Competition status:', competition.status);
         setSelectedCompetition(competition);
-        fetchMembers(competition.id);
-        fetchTeams(competition.id);
+        await fetchMembers(competition.id);
+        await fetchTeams(competition.id);
         fetchFriends();
         if (onCompetitionSelected) onCompetitionSelected(competition);
 
@@ -259,9 +260,26 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
         return (
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-                    <TouchableOpacity onPress={() => setView('list')} style={styles.backButton}>
-                        <Text style={styles.backButtonText}>← Back to competitions</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <TouchableOpacity onPress={() => setView('list')} style={styles.backButton}>
+                            <Text style={styles.backButtonText}>← Back to competitions</Text>
+                        </TouchableOpacity>
+                        {members.some((m: any) => m.userId === user.id && m.role === 'super_admin') && (
+                            <TouchableOpacity style={{ padding: 8 }} onPress={async () => {
+                                if (window.confirm('Are you sure you want to delete this competition?')) {
+                                    try {
+                                        await ApiService.deleteCompetition(selectedCompetition.id, user.id);
+                                        fetchCompetitions();
+                                        setView('list');
+                                    } catch (error: any) {
+                                        alert(error.message);
+                                    }
+                                }
+                            }}>
+                                <Ionicons name="trash-outline" size={24} color="#E53935" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
                     <Text style={styles.title}>{selectedCompetition.name}</Text>
                     <Text style={styles.dateText}>{selectedCompetition.startDate} → {selectedCompetition.endDate}</Text>
@@ -328,9 +346,10 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
                         )}
                     </View>
                 </ScrollView>
-            </SafeAreaView>
+            </SafeAreaView >
         );
     }
+
 
     // TEAMS VIEW
     if (view === 'teams') {
@@ -341,7 +360,25 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
                         <Text style={styles.backButtonText}>← Back</Text>
                     </TouchableOpacity>
 
-                    <Text style={styles.title}>{selectedCompetition?.name}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+
+                        <Text style={styles.title}>{selectedCompetition?.name}</Text>
+                        {members.some((m: any) => m.userId === user.id && m.role === 'super_admin') && (
+                            <TouchableOpacity style={{ padding: 8 }} onPress={async () => {
+                                if (window.confirm('Are you sure you want to delete this competition?')) {
+                                    try {
+                                        await ApiService.deleteCompetition(selectedCompetition.id, user.id);
+                                        fetchCompetitions();
+                                        setView('list');
+                                    } catch (error: any) {
+                                        alert(error.message);
+                                    }
+                                }
+                            }}>
+                                <Ionicons name="trash-outline" size={24} color="#E53935" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                     <Text style={styles.dateText}>Team Results</Text>
 
                     {teams.length > 0 && (
@@ -394,7 +431,24 @@ export default function CompetitionScreen({ user, onNavigateToProfile, initialCo
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
 
-                    <Text style={styles.title}>{selectedCompetition?.name}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={styles.title}>{selectedCompetition?.name}</Text>
+                        {members.some((m: any) => m.userId === user.id && m.role === 'super_admin') && (
+                            <TouchableOpacity style={{ padding: 8 }} onPress={async () => {
+                                if (window.confirm('Are you sure you want to delete this competition?')) {
+                                    try {
+                                        await ApiService.deleteCompetition(selectedCompetition.id, user.id);
+                                        fetchCompetitions();
+                                        setView('list');
+                                    } catch (error: any) {
+                                        alert(error.message);
+                                    }
+                                }
+                            }}>
+                                <Ionicons name="trash-outline" size={24} color="#E53935" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                     <View style={styles.activeBadge}>
                         <Text style={styles.activeBadgeText}>Active</Text>
                     </View>
