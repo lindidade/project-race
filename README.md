@@ -1,6 +1,6 @@
 # Project Race
 
-A full-stack mobile application for activity tracking and team competitions. Built with React Native (Expo) for the frontend and ASP.NET Core Web API for the backend, with PostgreSQL as the database.
+A full-stack mobile application for activity tracking and team competitions. Built with React Native (Expo) for the frontend and ASP.NET Core Web API for the backend, with PostgreSQL and Neon as the database.
 
 ## Tech Stack
 
